@@ -347,7 +347,21 @@ const nextHabil=d=>{let x=d;for(;;){const w=new Date(x+'T12:00:00').getDay();if(
 const giraDias=g=>{const L=[];let d=g.ida||nextHabil(addD(HOY,1));for(let i=0;i<g.dias;i++){L.push(d);d=addD(d,1)}return L};
 const norm2=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
 function saldoDe(id){return Object.values(cobros).filter(p=>p.cid===id&&p.estado==='pendiente'&&!p.noReclamar).reduce((s,p)=>s+Number(p.monto||0),0)}
-function puntaje(c,mati){let s=0,r=[];const sal=saldoDe(c.id);if(sal){s+=50;r.push('Cobrar '+money(sal))}
+const MALOS=/no quiere|maltrat|mal pagador|directo a f[aá]brica|no le interesa/i;
+const diasDesde=f=>f?Math.round((new Date(HOY+'T12:00:00')-new Date(f+'T12:00:00'))/864e5):999;
+function ultCont(c){let u=c.ultimo||'';const m=String(c.ultContHoja||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m){const iso=m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');if(iso>u)u=iso}return u}
+const FREQV={A:60,B:90,C:180};
+function categoria(c){const ac=c.accion||'',dd=diasDesde(ultCont(c));
+  if(c.etapa==='prospecto')return 'pros';
+  if(/REACTIVAR|RECUPERAR/.test(ac)||c.etapa==='dormido'||(c.meses!=null&&c.meses!==''&&+c.meses>=12))return 'reac';
+  if(/REPOSICI/.test(ac))return 'repo';
+  if(dd>=(FREQV[c.sgm]||120))return 'visita';
+  if(delMes(c))return 'mes';
+  return 'resto'}
+const visitable=c=>c.etapa!=='descartado'&&!c.noVisita&&!MALOS.test(c.obs||'');
+function puntaje(c,mati){let s=0,r=[];const sal=saldoDe(c.id);if(sal){s+=5;r.push('Aprovechá a cobrar '+money(sal))}
+  const dd=diasDesde(ultCont(c));if(dd<14){s-=15;r.push('Contactado hace '+dd+' días')}else if(c.etapa!=='prospecto'&&dd>=(FREQV[c.sgm]||120)&&dd<999){s+=12;r.push('Sin contacto hace '+Math.round(dd/30)+' meses')}
+  if(c.meses!=null&&c.meses!==''&&+c.meses>=12){s+=10;r.push('Muerto: '+c.meses+' meses sin comprar')}
   s+={A:30,B:20,C:10}[c.sgm]||0;const ac=c.accion||'';
   if(/REPOSICI.N VENCIDA/.test(ac)){s+=25;r.push('Reposición vencida')}else if(/REPOSICI/.test(ac)){s+=15;r.push('Reposición')}else if(/REACTIVAR/.test(ac)){s+=12;r.push('Reactivar')}else if(/RECUPERAR/.test(ac)){s+=8;r.push('Recuperar')}
   if(c.etapa==='cliente')s+=10;if(delMes(c)){s+=10;r.push('Toca este mes')}
@@ -371,7 +385,7 @@ function renderGira(){
    <label class="sel" style="margin-top:14px;color:var(--ink)"><input type="checkbox" id="g-mati"${g.mati?' checked':''}> Voy con Mati (suma los clientes del laboratorio)</label>
    <label>Zona</label><select id="g-z"><option value="">Elegí zona</option>${zonas.map(z=>`<option${z===g.zona?' selected':''}>${esc(z)}</option>`).join('')}</select>
    ${locs.length?`<label>${g.zona==='Córdoba Capital'?'Barrios':'Localidades'} (tocá en el orden del recorrido)</label><div class="chips" style="flex-wrap:wrap">${locs.map(l=>{const i=g.locs.indexOf(l);return `<button class="b${i>=0?' on':''}" data-a="gloc" data-v="${esc(l)}">${i>=0?(i+1)+'. ':''}${esc(l)} ${cnt(l)}</button>`}).join('')}</div>`:''}
-   <div class="acts" style="margin-top:12px"><button class="b p" data-a="garmar">Armar gira recomendada</button></div>
+   <div class="acts" style="margin-top:12px"><button class="b p" data-a="gsug">Sugerime una gira</button><button class="b" data-a="garmar">Armar con lo que elegí</button></div><p class="sub" style="margin-top:6px">"Sugerime una gira" elige la zona y las localidades según lo que te toca visitar: reposición, reactivar, muertos, prospectos y los que hace mucho no ves. Mezcla un poco de cada cosa. Si elegís una sola localidad del interior, suma todas las ópticas de ahí.</p>
    <div id="g-plan"></div>
    ${listaGiras()}`;
   $('g-ida').onchange=e=>{g.ida=e.target.value;g.plan=null;renderRuta()};
@@ -381,20 +395,39 @@ function renderGira(){
   $('g-z').onchange=e=>{g.zona=e.target.value;g.locs=[];g.plan=null;renderRuta()};
   if(g.plan)pintarPlan();
 }
+const CATN={repo:'Reposición',reac:'Reactivar / muertos',visita:'Hace mucho sin contacto',pros:'Prospectos',mes:'Le toca este mes',resto:'Otros'};
+function mezclar(cand,cap){const G={};cand.forEach(x=>(G[x.k]=G[x.k]||[]).push(x));Object.values(G).forEach(a=>a.sort((x,y)=>y.p-x.p));
+  const ord=['repo','reac','visita','pros','mes','resto'],out=[];let any=true;
+  while(out.length<cap&&any){any=false;for(const k of ord){const a=G[k];if(a&&a.length&&out.length<cap){out.push(a.shift());any=true}}}return out}
+function sugerirGira(){
+  const g=st.g,pool=allCli().filter(visitable).map(c=>{const [p,r]=puntaje(c,g.mati);return {c,p,r,k:categoria(c),z:zonaG(c),l:locG(c)}}).filter(x=>x.z&&x.l&&x.k!=='resto'&&(g.mati||x.c.origen!=='Laboratorio'||x.p>5));
+  const cap=g.dias*g.porDia,Z={};pool.forEach(x=>(Z[x.z]=Z[x.z]||[]).push(x));
+  const val=xs=>xs.slice().sort((a,b)=>b.p-a.p).slice(0,cap).reduce((s,x)=>s+Math.max(1,x.p),0);
+  const CERCA=['Córdoba Capital','Sierras Chicas','Zona Punilla'];const zs=Object.keys(Z).filter(z=>g.dias>1?!['Córdoba Capital','Sierras Chicas','Extra Provincia','Limitrofes Santa Fe'].includes(z):CERCA.includes(z)).sort((a,b)=>val(Z[b])-val(Z[a]));
+  if(!zs.length){toast('No encontré ópticas para sugerir');return}
+  const z=zs[0],L={};Z[z].forEach(x=>(L[x.l]=L[x.l]||[]).push(x));
+  const locs=Object.keys(L).sort((a,b)=>val(L[b])-val(L[a]));const pick=[];let n=0;
+  for(const l of locs){pick.push(l);n+=L[l].length;if(n>=cap*1.3)break}
+  g.zona=z;g.locs=pick;g.sug={zona:z,n:Z[z].length,otra:zs[1]||'',cats:Object.entries(Z[z].reduce((o,x)=>(o[x.k]=(o[x.k]||0)+1,o),{})).sort((a,b)=>b[1]-a[1]).map(([k,v])=>CATN[k]+' '+v).join(' · ')};
+  armarGira();
+}
 function armarGira(){
   const g=st.g;if(!g.locs.length){toast(g.zona==='Córdoba Capital'?'Elegí al menos un barrio':'Elegí al menos una localidad');return}
-  const all=allCli().filter(c=>c.etapa!=='descartado'&&!c.noVisita&&g.locs.includes(locG(c))&&zonaG(c)===g.zona);
-  const cand=all.map(c=>{const [p,r]=puntaje(c,g.mati);return {c,p,r}}).filter(x=>g.mati||x.c.origen!=='Laboratorio'||x.p>5);
-  const cap=g.dias*g.porDia;const top=cand.slice().sort((a,b)=>b.p-a.p).slice(0,cap);const set=new Set(top.map(x=>x.c.id));
+  const all=allCli().filter(c=>visitable(c)&&g.locs.includes(locG(c))&&zonaG(c)===g.zona);
+  const cand=all.map(c=>{const [p,r]=puntaje(c,g.mati);return {c,p,r,k:categoria(c)}}).filter(x=>g.mati||x.c.origen!=='Laboratorio'||x.p>5);
+  const todo=g.locs.length===1&&g.zona!=='Córdoba Capital';
+  const cap=todo?cand.length:g.dias*g.porDia;
+  const top=mezclar(cand,cap);const set=new Set(top.map(x=>x.c.id));const pd=todo?Math.max(g.porDia,Math.ceil(cand.length/g.dias)):g.porDia;
   const ord=[];g.locs.forEach(l=>top.filter(x=>locG(x.c)===l).sort((a,b)=>b.p-a.p).forEach(x=>ord.push(x)));
-  const dias=giraDias(g);g.plan=dias.map((d,i)=>({d,stops:ord.slice(i*g.porDia,(i+1)*g.porDia)}));
+  const dias=giraDias(g);g.plan=dias.map((d,i)=>({d,stops:ord.slice(i*pd,(i+1)*pd)}));
   g.extra=cand.filter(x=>!set.has(x.c.id)).sort((a,b)=>b.p-a.p).slice(0,10);
   st.gctx={};g.plan.forEach(day=>day.stops.forEach(x=>st.gctx[x.c.id]={fecha:day.d,loc:x.c.barrio}));
   renderRuta();setTimeout(()=>$('g-plan')&&$('g-plan').scrollIntoView({behavior:'smooth'}),50);
 }
 function pintarPlan(){
   const g=st.g,tot=g.plan.reduce((s,d)=>s+d.stops.length,0),sal=g.plan.reduce((s,d)=>s+d.stops.reduce((t,x)=>t+saldoDe(x.c.id),0),0);
-  $('g-plan').innerHTML=`<div class="kpi" style="margin-top:18px"><div><b>${tot}</b><span>visitas</span></div><div><b>${esc(money(sal))}</b><span>para cobrar en la gira</span></div></div>
+  const sg=g.sug&&g.sug.zona===g.zona?g.sug:null;
+  $('g-plan').innerHTML=`${sg?`<div class="note" style="margin-top:16px"><b>Te sugiero ${esc(sg.zona)}</b>: ${esc(sg.cats)}.${sg.otra?' Otra opción: '+esc(sg.otra)+'.':''} Podés cambiar zona o localidades y volver a armar.</div>`:''}<div class="kpi" style="margin-top:18px"><div><b>${tot}</b><span>visitas</span></div><div><b>${esc(money(sal))}</b><span>para cobrar en la gira</span></div></div>
    ${g.plan.map((day,i)=>`<div class="sec"><h2>Día ${i+1} · ${esc(fmt(day.d))}</h2><span>${day.stops.length} ópticas</span></div>
     <div class="acts" style="margin:0 0 8px"><button class="b" data-a="gcopy" data-i="${i}">Copiar direcciones (Spoke)</button></div>
     ${day.stops.map(x=>`<div class="it"><div class="bd"><div class="tt">${esc(x.c.n)}</div><div class="sub">${esc([x.c.barrio,x.c.dir].filter(Boolean).join(' · '))}</div><div class="sub">${esc(x.r.join(' · '))}</div>${g.mati?`<div class="sub" style="color:var(--az)">${esc(quien(x.c))}</div>`:''}
@@ -992,6 +1025,7 @@ document.body.addEventListener('click',async e=>{
   if(a==='gdias'){st.g.dias=+b.dataset.v;st.g.plan=null;return renderRuta()}
   if(a==='gloc'){const L=st.g.locs,v=b.dataset.v,i=L.indexOf(v);if(i>=0)L.splice(i,1);else L.push(v);st.g.plan=null;return renderRuta()}
   if(a==='garmar')return armarGira();
+  if(a==='gsug')return sugerirGira();
   if(a==='gagendar')return agendarGira();
   if(a==='gguardar')return guardarGira();
   if(a==='gcsv')return csvGira(id);
