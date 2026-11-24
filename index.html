@@ -128,7 +128,7 @@ function plantilla(m,c,p){const nom='';switch(m){
  case 'postventa':return `Hola! ¿Cómo andás? ¿Llegó bien el pedido? ¿Qué te parecieron los modelos? Si necesitás algo más o algún cambio, avisame.`;
  case 'mes1':return `Hola! ¿Cómo va? Ya pasó un mes del pedido, ¿cómo se están moviendo los modelos? ¿Hay alguno que se haya vendido rápido y quieras reponer?`;
  case 'mes2':return `Hola! ¿Cómo andás? Pasaron dos meses del último pedido. ¿Cómo vienen las ventas? Te puedo armar una reposición con lo que más salió y sumar algunas novedades.`;
- case 'gira':{const g=(st.gctx||{})[c.id]||{};return `Hola! ¿Cómo andás? ${g.fecha?'El '+new Date(g.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric'}):'Estos días'} voy a estar por ${g.loc||c.barrio||'tu zona'}${st.g&&st.g.mati?' con Mati, mi compañero del laboratorio,':''} con las novedades de Tiffany Occhiali, Union Pacific, Paul Riviere, Embó y Bend Flex. ¿Te puedo pasar a ver? ¿Qué horario te queda cómodo?`}
+ case 'gira':{const g=(st.gctx||{})[c.id]||giraDe(c.id)||{};return `Hola! ¿Cómo andás? ${g.fecha?'El '+new Date(g.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric'}):'Estos días'} voy a estar por ${g.loc||c.barrio||'tu zona'}${st.g&&st.g.mati?' con Mati, mi compañero del laboratorio,':''} con las novedades de Tiffany Occhiali, Union Pacific, Paul Riviere, Embó y Bend Flex. ¿Te puedo pasar a ver? ¿Qué horario te queda cómodo?`}
  case 'reposicion':return `Hola! ¿Cómo andás? Te escribo de Grupo Óptico. ${c.ultCompra?'Ya pasaron unos meses de tu última compra y ':''}entraron modelos nuevos de Tiffany Occhiali, Union Pacific y Paul Riviere. Querés que te pase fotos o coordinamos una cita para que vean y conozcan la valija?`;
  case 'reactivar':return `Hola! Cómo va? Hace un tiempo que no hablamos y tenemos muchas novedades en armazones. Además la financiación en cheques hasta 150 días o financiaciones disponibles que se adapten a vos.`;
  case 'cobro':return `Hola! ¿Cómo andás? Te escribo por el saldo pendiente${p&&p.monto?' de '+money(p.monto):''}${p&&p.fecha?' ('+(p.tipo==='Factura'?'factura ':'')+'del '+fmt(p.fecha)+')':''}. ¿Me confirmás cuándo lo podemos coordinar? ¡Gracias!`;
@@ -178,7 +178,7 @@ function itemsHoy(){
   for(const [id,t] of Object.entries(tareas)){
     if(t.hecha&&t.hechaF!==HOY)continue;
     if(!t.hecha&&t.f>HOY)continue;
-    L.push({k:'t',id,tipo:t.tipo||'otro',t:t.t,det:t.det,f:t.f,cid:t.cid,hecha:!!t.hecha,por:t.por});
+    L.push({k:'t',id,tipo:t.tipo||'otro',t:t.t,det:t.det,f:t.f,cid:t.cid,hecha:!!t.hecha,por:t.por,m:t.m});
   }
   for(const c of allCli()){
     if(c.prox&&c.prox<=HOY&&c.etapa!=='descartado')L.push({k:'c',id:c.id,tipo:'seg',t:c.n,det:c.motivo||'Seguimiento',f:c.prox,cid:c.id});
@@ -428,6 +428,9 @@ function pintarPlan(){
   const g=st.g,tot=g.plan.reduce((s,d)=>s+d.stops.length,0),sal=g.plan.reduce((s,d)=>s+d.stops.reduce((t,x)=>t+saldoDe(x.c.id),0),0);
   const sg=g.sug&&g.sug.zona===g.zona?g.sug:null;
   $('g-plan').innerHTML=`${sg?`<div class="note" style="margin-top:16px"><b>Te sugiero ${esc(sg.zona)}</b>: ${esc(sg.cats)}.${sg.otra?' Otra opción: '+esc(sg.otra)+'.':''} Podés cambiar zona o localidades y volver a armar.</div>`:''}<div class="kpi" style="margin-top:18px"><div><b>${tot}</b><span>visitas</span></div><div><b>${esc(money(sal))}</b><span>para cobrar en la gira</span></div></div>
+   ${(()=>{const A=avisosGira();return A.length?`<div class="card" style="margin-top:14px;padding:14px"><div class="tt" style="font-weight:600">Avisales que vas (${A.length})</div><div class="sub" style="margin-bottom:8px">Son clientes que te compran seguido. Escribiles unos días antes para que te esperen.</div>
+     ${A.map(({x,d})=>`<div class="it" style="align-items:center"><div class="bd"><div class="tt">${esc(x.c.n)}</div><div class="sub">${esc(fmt(d)+' · '+(locG(x.c)||x.c.barrio||''))}${x.c.sgm?' · Seg '+esc(x.c.sgm):''}</div></div><button class="b w" data-a="msg" data-id="${esc(x.c.id)}" data-m="gira">Mensaje</button></div>`).join('')}
+     <div class="acts" style="margin-top:8px"><button class="b p" data-a="gavisos">Agendar los avisos en Mensajes</button></div><div class="sub" style="margin-top:4px">Te aparecen en Hoy, 3 días hábiles antes de cada visita.</div></div>`:''})()}
    ${g.plan.map((day,i)=>`<div class="sec"><h2>Día ${i+1} · ${esc(fmt(day.d))}</h2><span>${day.stops.length} ópticas</span></div>
     <div class="acts" style="margin:0 0 8px"><button class="b" data-a="gcopy" data-i="${i}">Copiar direcciones (Spoke)</button></div>
     ${day.stops.map(x=>`<div class="it"><div class="bd"><div class="tt">${esc(x.c.n)}</div><div class="sub">${esc([x.c.barrio,x.c.dir].filter(Boolean).join(' · '))}</div><div class="sub">${esc(x.r.join(' · '))}</div>${g.mati?`<div class="sub" style="color:var(--az)">${esc(quien(x.c))}</div>`:''}
@@ -435,10 +438,21 @@ function pintarPlan(){
    ${g.extra&&g.extra.length?`<details><summary>Si te da el tiempo (${g.extra.length})</summary>${g.extra.map(x=>`<div class="note">${esc(x.c.n)} · ${esc(x.c.barrio||'')} — ${esc(x.r.join(' · '))}</div>`).join('')}</details>`:''}
    <div class="acts" style="margin-top:14px"><button class="b p" data-a="gagendar">Agendar la gira en Hoy</button><button class="b" data-a="gguardar">Guardar gira (planilla)</button></div>`;
 }
+const giraDe=cid=>{const t=Object.values(tareas).filter(t=>t.cid===cid&&t.gf&&t.gf>=HOY).sort((a,b)=>a.gf.localeCompare(b.gf))[0];return t?{fecha:t.gf,loc:t.gl}:null};
+const habitual=c=>c.etapa==='cliente'&&(['A','B'].includes(c.sgm)||(c.meses!=null&&c.meses!==''&&+c.meses<=6));
+function avisosGira(){const g=st.g,L=[];(g.plan||[]).forEach(day=>day.stops.forEach(x=>{if(habitual(x.c))L.push({x,d:day.d})}));return L}
+const diaAviso=d=>{let a=addD(d,-3);for(let i=0;i<5;i++){const w=new Date(a+'T12:00:00').getDay();if(w&&w<6)break;a=addD(a,-1)}return a<HOY?HOY:a};
+async function agendarAvisos(silencio){
+  let n=0;for(const {x,d} of avisosGira()){
+    if(Object.values(tareas).some(t=>t.cid===x.c.id&&t.m==='gira'&&t.gf===d&&!t.hecha))continue;
+    const k=newId('t'),t={t:'Avisar que vas: '+x.c.n,det:'Gira el '+fmt(d)+' por '+(locG(x.c)||x.c.barrio||'su zona'),tipo:'seg',f:diaAviso(d),cid:x.c.id,m:'gira',gf:d,gl:locG(x.c)||x.c.barrio||'',hecha:false,por:'kata'};
+    tareas[k]=t;await save('tareas/'+k,t);n++}
+  render();if(!silencio)toast(n?n+' avisos agendados en Mensajes':'Ya estaban agendados');return n}
 async function agendarGira(){
   const g=st.g;let n=0;
   for(const day of g.plan)for(const x of day.stops){const k=newId('t');const t={t:'Gira: visitar '+x.c.n,det:x.r.join(' · ')+(g.mati?' · '+quien(x.c):''),tipo:'visita',f:day.d,cid:x.c.id,hecha:false,por:'kata'};tareas[k]=t;await save('tareas/'+k,t);n++}
-  render();toast(n+' visitas agendadas');
+  const av=await agendarAvisos(true);
+  render();toast(n+' visitas agendadas'+(av?' y '+av+' avisos en Mensajes':''));
 }
  
 const GURL=()=>`https:\/\/docs.google.com/spreadsheets/d/${BASE_SSID}/edit#gid=109`;
@@ -1027,6 +1041,7 @@ document.body.addEventListener('click',async e=>{
   if(a==='garmar')return armarGira();
   if(a==='gsug')return sugerirGira();
   if(a==='gagendar')return agendarGira();
+  if(a==='gavisos')return agendarAvisos();
   if(a==='gguardar')return guardarGira();
   if(a==='gcsv')return csvGira(id);
   if(a==='gborrar'){if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='Tocá de nuevo para borrar';return}delete giras[id];render();await del('giras/'+id);return escribirGiras()}
