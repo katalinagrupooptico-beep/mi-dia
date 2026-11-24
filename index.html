@@ -829,6 +829,7 @@ async function okPed(id,btn){
  
 function itemsSL(f){
   const L=[],conNota=new Set();
+  allCli().forEach(c=>{if(c.nuevo&&(c.creado||((c.notas||[])[0]||{}).f)===f)L.push({k:'n-'+c.id,t:'Cliente nuevo: '+c.n,d:'Darlo de alta en Smart Lab'+[c.dir,c.wa?'WhatsApp '+c.wa:''].filter(Boolean).map(x=>' · '+x).join(''),z:c.barrio||''})});
   allCli().forEach(c=>(c.notas||[]).forEach((n,i)=>{if(n.f===f){L.push({k:'c-'+c.id+'-'+i,t:c.n,d:n.t,z:c.barrio||''});conNota.add(c.id)}}));
   Object.entries(tareas).forEach(([id,t])=>{if(t.hecha&&t.hechaF===f&&(!t.cid||!conNota.has(t.cid)))L.push({k:'t-'+id,t:t.cid?cli(t.cid).n:TIPOS[t.tipo]||'Tarea',d:t.t,z:t.cid?cli(t.cid).barrio||'':''})});
   return L;
@@ -934,7 +935,7 @@ async function guardarRapido(){
   const n=$('r-n').value.trim();if(!n){toast('Falta el nombre');return}
   const d=$('r-d').value.trim(),q=$('r-q').value.trim(),o=$('r-o').value.trim(),k=newId('n');
   const nota=['Primera visita',q?'atendió '+q:'',o].filter(Boolean).join(' · ');
-  close();await saveCli(k,{nuevo:true,n,wa:telWa($('r-t')?.value||'')||'',dir:/^https:[/][/]/.test(d)?'':d,mapa:/^https:[/][/]/.test(d)?d:'',barrio:$('r-b')?.value.trim()||'',zona:'',etapa:'prospecto',origen:'Visita',notas:[{f:HOY,t:nota}],ultimo:HOY,hechoHoy:true,prox:addD(HOY,3),motivo:'2º contacto (lo visitaste el '+fmt(HOY)+')'});
+  close();await saveCli(k,{nuevo:true,creado:HOY,n,wa:telWa($('r-t')?.value||'')||'',dir:/^https:[/][/]/.test(d)?'':d,mapa:/^https:[/][/]/.test(d)?d:'',barrio:$('r-b')?.value.trim()||'',zona:'',etapa:'prospecto',origen:'Visita',notas:[{f:HOY,t:nota}],ultimo:HOY,hechoHoy:true,prox:addD(HOY,3),motivo:'2º contacto (lo visitaste el '+fmt(HOY)+')'});
   toast('Agendada: '+n);
 }
  
@@ -1049,7 +1050,7 @@ document.body.addEventListener('click',async e=>{
   if(a==='okCobro'){const cid=$('p-c').value;if(!cid)return toast('Elegí la óptica');const k=id||newId('p');const n=Object.assign({},cobros[k]||{estado:'pendiente'},{cid,n:cli(cid).n,monto:Number(String($('p-m').value).replace(/\D/g,''))||0,vence:$('p-v').value,nota:$('p-n').value.trim(),tipo:($('p-tp').querySelector('.on')||{dataset:{tp:'Factura'}}).dataset.tp,fecha:(cobros[k]||{}).fecha||HOY});cobros[k]=n;close();render();save('cobros/'+k,n);return toast('Cobro guardado')}
   if(a==='delCobro'){delete cobros[id];close();render();return del('cobros/'+id)}
   if(a==='cobrado'){const p0=cobros[id],n=Object.assign({},p0,{estado:'cobrado',cobradoF:HOY});cobros[id]=n;render();save('cobros/'+id,n);saldoHoja(p0,n,{f:HOY,r:'pago',monto:Number(p0.monto||0)});const c=cli(n.cid);saveCli(n.cid,{notas:(c.notas||[]).concat([{f:HOY,t:'Cobrado '+money(n.monto)}])});return toast('¡Cobrado!')}
-  if(a==='okCli'){const n=$('n-n').value.trim();if(!n)return toast('Falta el nombre');const k=newId('n');close();await saveCli(k,{nuevo:true,n,barrio:$('n-b').value.trim(),zona:$('n-z').value.trim(),dir:$('n-d').value.trim(),wa:$('n-w').value.replace(/\D/g,''),etapa:$('n-e').value,notas:[]});return toast('Óptica agregada')}
+  if(a==='okCli'){const n=$('n-n').value.trim();if(!n)return toast('Falta el nombre');const k=newId('n');close();await saveCli(k,{nuevo:true,n,barrio:$('n-b').value.trim(),zona:$('n-z').value.trim(),dir:$('n-d').value.trim(),wa:$('n-w').value.replace(/\D/g,''),etapa:$('n-e').value,notas:[],creado:HOY});return toast('Óptica agregada. Queda para cargar en Smart Lab')}
   if(a==='copiarRuta'){const t=[...st.rsel].map(i=>{const c=cli(i);return [c.dir,c.barrio,'Córdoba'].filter(Boolean).join(', ')}).join('\n');try{await navigator.clipboard.writeText(t);toast('Copiadas. Pegalas en Spoke')}catch(_){open(`<div class="hd"><h2>Direcciones</h2><button class="x" data-a="close">×</button></div><textarea style="min-height:240px">${esc(t)}</textarea>`)}return}
   if(a==='agendarRuta'){for(const i of st.rsel){const k=newId('t');const n={t:'Visitar '+cli(i).n,tipo:'visita',f:HOY,cid:i,hecha:false,por:'kata'};tareas[k]=n;await save('tareas/'+k,n)}toast(st.rsel.size+' visitas en Hoy');st.rsel=new Set();return render()}
   if(a==='limpiarRuta'){st.rsel=new Set();return renderRuta()}
