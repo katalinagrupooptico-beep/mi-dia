@@ -211,7 +211,7 @@ function itemHTML(x){
    <div class="acts">${venc?`<span class="tag c">Vencida ${esc(fmt(x.f))}</span>`:''}${x.por==='claude'?'<span class="tag">Sugerida</span>':''}
    ${c&&!x.hecha?`<button class="b w" data-a="msg" data-id="${esc(c.id)}" data-m="${x.m||(x.tipo==='cobro'?'cobro':'')}" data-p="${x.k==='p'?esc(x.id):''}" data-v="${esc(x.pid||'')}">Mensaje</button>`:''}
    ${c?`<button class="b" data-a="ficha" data-id="${esc(c.id)}">Ficha</button>`:''}
-   ${x.k!=='p'&&x.k!=='v'&&!x.hecha?`<button class="b" data-a="pos" data-k="${x.k}" data-id="${esc(x.id)}">Mañana</button>`:''}</div></div></div>`;
+   ${x.k!=='p'&&x.k!=='v'&&!x.hecha?`<button class="b" data-a="pos" data-k="${x.k}" data-id="${esc(x.id)}">Mañana</button>`:''}${x.k==='t'?`<button class="b" data-a="delTarea" data-id="${esc(x.id)}">Borrar</button>`:''}</div></div></div>`;
 }
 function renderHoy(){
   const L=itemsHoy(),done=L.filter(x=>x.hecha).length,tot=L.length,p=tot?done/tot:0;
@@ -269,7 +269,7 @@ function ficha(id){
    ${c.src==='hoja'?`<label>De tu hoja de trabajo</label><div class="kpi"><div><b>${esc(c.sgm||'-')}</b><span>segmento</span></div><div><b>${esc(c.tot??0)}</b><span>unidades 2026</span></div><div><b>${esc(c.ven26?money(c.ven26):'-')}</b><span>facturado 2026</span></div></div><div class="sub">${esc([c.accion,c.proxMes?'próx. contacto '+c.proxMes:'',c.ultCompra?'últ. compra '+c.ultCompra:'',c.meses!=null?c.meses+' meses sin compra':'',c.ultContHoja?'últ. contacto '+c.ultContHoja:''].filter(Boolean).join(' · '))}</div>${c.notaHoja?`<div class="note">${esc(c.notaHoja)}</div>`:''}${c.mail?`<div class="sub">${esc(c.mail)}</div>`:''}`:''}
    ${c.obs?`<label>Tu observación</label><div class="note">${esc(c.obs)}</div>`:''}
    ${ps.length?`<label>Cobros</label>${ps.map(([,p])=>`<div class="note"><b>${esc(p.estado)}</b> ${esc(TIPOL(p.tipo))} ${esc(money(p.monto))} ${p.vence?'· vence '+esc(fmt(p.vence)):''} ${esc(p.nota||'')}</div>`).join('')}`:''}
-   <label>Historial</label>${(c.notas||[]).slice().reverse().map(n=>`<div class="note"><b>${esc(fmt(n.f))}</b> ${esc(n.t)}</div>`).join('')||'<div class="sub">Sin contactos registrados.</div>'}`);
+   <label>Historial</label>${(c.notas||[]).map((n,i)=>[n,i]).reverse().map(([n,i])=>`<div class="note" style="display:flex;gap:8px;align-items:flex-start"><span style="flex:1"><b>${esc(fmt(n.f))}</b> ${esc(n.t)}</span><button class="b" data-a="notaEd" data-id="${esc(id)}" data-i="${i}" style="padding:4px 10px">Editar</button><button class="b" data-a="notaDel" data-id="${esc(id)}" data-i="${i}" style="padding:4px 10px">Borrar</button></div>`).join('')||'<div class="sub">Sin contactos registrados.</div>'}`);
 }
 function contacto(id,taskId){
   const c=cli(id),nc=(c.notas||[]).length+1,esPros=c.etapa==='prospecto',defD=esPros?({1:3,2:7,3:15}[nc]||30):7,defM=esPros?(nc+1)+'º contacto':(c.motivo||''),motA=st.motAct||(esPros?nc+'º contacto':(c.motivo||'Seguimiento'));st.motAct='';
@@ -700,10 +700,13 @@ function vNuevo(){
   const upd=()=>{const z=$('vn-z').value.trim(),f=fechasTxt($('vn-d').value,$('vn-h').value);$('vn-t').value=[z,f].filter(Boolean).join(' - ')};
   ['vn-z','vn-d','vn-h'].forEach(i=>$(i).addEventListener('input',upd));upd();
 }
+let vCreando=false;
 async function vCrear(){
+  if(vCreando)return;
   const monto=Number(String($('vn-m').value).replace(/\D/g,''))||0,titulo=$('vn-t').value.trim();
   if(!monto)return toast('Poné cuánto te dieron');if(!titulo)return toast('Poné la zona');
   const id=newId('vi');const v={titulo,zona:$('vn-z').value.trim(),desde:$('vn-d').value,hasta:$('vn-h').value,monto,nota:$('vn-n').value.trim(),gastos:[],estado:'abierto',hoja:{creado:false},creado:HOY};
+  vCreando=true;setTimeout(()=>vCreando=false,3000);
   viat[id]=v;await save('viaticos/'+id,v);verViatico(id);syncViat(id);
 }
 let vCon='Combustible';
@@ -721,9 +724,29 @@ function verViatico(id){
    <div class="acts" style="margin-top:8px"><button class="b p" data-a="vGasto" data-id="${esc(id)}">Agregar gasto</button></div>`:''}
    <div class="sec"><h3>Gastos</h3></div>
    ${(v.gastos||[]).map((g,i)=>`<div class="note" style="display:flex;gap:8px;align-items:center"><span style="flex:1"><b>${esc(g.c)}</b> · ${esc(g.d||'sin detalle')}</span><span style="white-space:nowrap">${g.favor?'+':'−'}${esc(money(Math.abs(g.m)))}</span>${abierto?`<button class="x" data-a="vBorrar" data-id="${esc(id)}" data-i="${i}" aria-label="Borrar gasto">×</button>`:''}</div>`).join('')||'<div class="sub">Todavía no hay gastos.</div>'}
-   ${abierto?`<div class="acts" style="margin-top:16px"><button class="b" data-a="vRendir" data-id="${esc(id)}">Rendir: marcar ENTREGADO</button></div><p class="sub">Rendís cuando entregás los tickets y ${esc(money(Math.max(0,vResto(v))))} que sobran.</p>`:'<p class="sub">Rendido: en la hoja figura como ENTREGADO.</p>'}`);
+   ${abierto?`<div class="acts" style="margin-top:16px"><button class="b" data-a="vRendir" data-id="${esc(id)}">Rendir: marcar ENTREGADO</button></div><p class="sub">Rendís cuando entregás los tickets y ${esc(money(Math.max(0,vResto(v))))} que sobran.</p>`:'<p class="sub">Rendido: en la hoja figura como ENTREGADO.</p>'}
+   <div class="acts" style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px"><button class="b" data-a="vRearmar" data-id="${esc(id)}">No lo veo en la hoja: volver a pasarlo</button><button class="b" data-a="vEliminar" data-id="${esc(id)}" style="color:var(--co)">Borrar viático</button></div>
+   <p class="sub">Borrar lo saca de la app y borra su cuadrito de la hoja (si sigue ahí). Usalo para pruebas.</p>`);
   const gc=$('vg-c');if(gc)gc.onclick=e=>{const b=e.target.closest('[data-vc]');if(!b)return;vCon=b.dataset.vc;gc.querySelectorAll('.b').forEach(x=>x.classList.toggle('on',x===b))};
   const q=$('vg-q');if(q)q.onclick=e=>{const b=e.target.closest('[data-vq]');if(!b)return;const d=$('vg-d');d.value=b.dataset.vq;d.focus()};
+}
+function vBloqueRango(v){const C=VCOLS[v.lado];return `${VTAB}!${C[0]}${v.fila}:${C[3]}${v.fila+NG+3}`}
+async function vEnHoja(v){if(!v.hoja||!v.hoja.creado||!v.fila)return false;try{const r=await gs('get_values',{range:vRango(v,v.fila,v.fila,0,0)});const t=String((((r||{}).values||[])[0]||[])[0]||'').trim();return t===String(v.titulo||'').trim()}catch(e){return null}}
+async function vEliminar(id){
+  const v=viat[id];if(!v)return;let txt='Viático borrado de la app';
+  const est=await vEnHoja(v);
+  if(est){try{
+    const blank=[];for(let i=0;i<NG+4;i++)blank.push(['','','','']);
+    await gs('update_values',{range:vBloqueRango(v),values:blank});
+    const c=VCOLS[v.lado][4];await gs('update_spreadsheet',{requests:[{repeatCell:{range:{sheetId:VSHEET,startRowIndex:v.fila-1,endRowIndex:v.fila+NG+3,startColumnIndex:c,endColumnIndex:c+4},cell:{},fields:'userEnteredFormat'}}]});
+    txt='Viático borrado de la app y de la hoja'}catch(e){txt='Lo borré de la app, pero no pude borrarlo de la hoja: borralo a mano'}}
+  else if(est===false&&v.hoja&&v.hoja.creado)txt='Lo borré de la app (en la hoja ya no estaba)';
+  delete viat[id];await del('viaticos/'+id);close();toast(txt);
+}
+async function vRearmar(id){
+  const v=viat[id];if(!v)return;const est=await vEnHoja(v);
+  if(est){toast('Ya está en la hoja ('+VCOLS[v.lado][0]+v.fila+'). Actualizo los gastos.');const n=Object.assign({},v,{hoja:Object.assign({},v.hoja,{gastos:-1,rendido:false})});viat[id]=n;return syncViat(id)}
+  const n=Object.assign({},v,{hoja:{creado:false}});viat[id]=n;await save('viaticos/'+id,n);syncViat(id);toast('Lo vuelvo a pasar a la hoja');
 }
 async function vGasto(id){
   const v=viat[id],m=Number(String($('vg-m').value).replace(/\D/g,''))||0;if(!m)return toast('Poné el monto');
@@ -950,11 +973,38 @@ async function marcarHoja(c,nota,mot){
     const [y,m,d]=HOY.split('-');
     const fila=i+1;let vals=[d+'/'+m+'/'+y];
     nota=[String(mot||'').trim(),String(nota||'').trim()].filter(Boolean).join(' · ');
-    if(nota){let prev='';try{const z=await gs('get_values',{range:OPTAB+'!Z'+fila});prev=String((((z||{}).values||[])[0]||[])[0]||'').trim()}catch(_){}
-      const t='Kata '+d+'/'+m+': '+nota;vals.push(prev?prev+' | '+t:t)}
+    let prevY='',prevZ='',t='';try{const z=await gs('get_values',{range:OPTAB+'!Y'+fila+':Z'+fila});const rr=(((z||{}).values||[])[0]||[]);prevY=String(rr[0]||'').trim();prevZ=String(rr[1]||'').trim()}catch(_){}
+    if(nota){t='Kata '+d+'/'+m+': '+nota;vals.push(prevZ?prevZ+' | '+t:t)}
     await gs('update_values',{range:OPTAB+'!Y'+fila+(vals.length>1?':Z'+fila:''),values:[vals]});
     toast('Anotado en tu hoja de trabajo');
+    return {fila,prevY,prevZ,y:vals[0],t};
   }catch(e){toast('No pude anotarlo en la hoja de trabajo')}
+}
+async function hojaRevertir(h,nuevoT){
+  if(!h||!h.fila||!mcpG)return;
+  try{const z=await gs('get_values',{range:OPTAB+'!Y'+h.fila+':Z'+h.fila});const rr=(((z||{}).values||[])[0]||[]);let Y=String(rr[0]||'').trim(),Z=String(rr[1]||'').trim();
+    if(h.t&&Z.includes(h.t)){Z=nuevoT!=null?Z.replace(h.t,nuevoT):Z.replace(' | '+h.t,'').replace(h.t,'').replace(/^ \| /,'').trim()}
+    if(nuevoT==null&&Y===h.y)Y=h.prevY;
+    await gs('update_values',{range:OPTAB+'!Y'+h.fila+':Z'+h.fila,values:[[Y,Z]]});toast(nuevoT==null?'También lo saqué de tu hoja de trabajo':'También lo cambié en tu hoja de trabajo')}
+  catch(e){toast('No pude cambiarlo en la hoja de trabajo')}
+}
+async function notaDel(cid,i){
+  const c=cli(cid),ns=(c.notas||[]).slice(),n=ns[i];if(!n)return;ns.splice(i,1);
+  const patch={notas:ns};if(c.ultimo===n.f&&!ns.some(x=>x.f===n.f)){const prev=ns.map(x=>x.f).filter(Boolean).sort().pop()||'';patch.ultimo=prev;if(n.f===HOY)patch.hechoHoy=false}
+  await saveCli(cid,patch);ficha(cid);toast('Contacto borrado');if(n.hoja)hojaRevertir(n.hoja,null);
+}
+function notaEd(cid,i){
+  const c=cli(cid),n=(c.notas||[])[i];if(!n)return;
+  open(`<div class="hd"><h2>Editar contacto</h2><button class="x" data-a="close" aria-label="Cerrar">×</button></div>
+   <div class="sub">${esc(c.n)} · ${esc(fmt(n.f))}</div>
+   <label>Qué pasó</label><textarea id="ne-t">${esc(n.t)}</textarea>
+   <div class="acts" style="margin-top:12px"><button class="b p" data-a="notaOk" data-id="${esc(cid)}" data-i="${i}">Guardar</button><button class="b" data-a="ficha" data-id="${esc(cid)}">Cancelar</button></div>`);
+}
+async function notaOk(cid,i){
+  const c=cli(cid),ns=(c.notas||[]).slice(),n=ns[i];if(!n)return;const t=$('ne-t').value.trim();if(!t)return toast('Escribí algo o borralo');
+  const nn=Object.assign({},n,{t});let nuevoT=null;
+  if(n.hoja&&n.hoja.t){const [,mm,dd]=n.f.split('-');nuevoT='Kata '+dd+'/'+mm+': '+t;nn.hoja=Object.assign({},n.hoja,{t:nuevoT})}
+  ns[i]=nn;await saveCli(cid,{notas:ns});ficha(cid);toast('Contacto modificado');if(n.hoja&&n.hoja.t)hojaRevertir(n.hoja,nuevoT);
 }
 async function escribirIA(btn){
   const c=cmp.cid?cli(cmp.cid):{},p=cmp.pid?cobros[cmp.pid]:null,why=($('m-why')||{}).value||'';
@@ -1013,6 +1063,12 @@ document.body.addEventListener('click',async e=>{
   if(a==='viaticos')return listaViaticos();
   if(a==='vNuevo')return vNuevo();
   if(a==='vCrear')return vCrear();
+  if(a==='vRearmar')return vRearmar(id);
+  if(a==='notaEd')return notaEd(id,+b.dataset.i);
+  if(a==='notaOk')return notaOk(id,+b.dataset.i);
+  if(a==='notaDel'){if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='¿Seguro?';return}return notaDel(id,+b.dataset.i)}
+  if(a==='vEliminar'){if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='Tocá de nuevo para borrar';return}return vEliminar(id)}
+  if(a==='delTarea'){if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='¿Seguro? Tocá de nuevo';return}delete tareas[id];render();await del('tareas/'+id);return toast('Tarea borrada')}
   if(a==='vVer')return verViatico(id);
   if(a==='vGasto')return vGasto(id);
   if(a==='vSync'){viat[id]=Object.assign({},viat[id],{err:''});verViatico(id);return syncViat(id)}
@@ -1090,7 +1146,7 @@ document.body.addEventListener('click',async e=>{
     const mot=($('f-mot')||{}).value?$('f-mot').value.trim():'';
     const notas=(c.notas||[]).concat([{f:HOY,t:[mot,nota].filter(Boolean).join(' · ')||'Contactada'}]);
     close();await saveCli(id,{notas,ultimo:HOY,hechoHoy:true,prox:d?addD(HOY,d):'',motivo:$('f-mot2')?.value||c.motivo||''});
-    marcarHoja(c,nota,mot);
+    marcarHoja(c,nota,mot).then(h=>{if(!h)return;const cc=cli(id),ns=(cc.notas||[]).slice(),k=ns.length-1;if(k>=0&&ns[k].f===HOY){ns[k]=Object.assign({},ns[k],{hoja:h});saveCli(id,{notas:ns})}});
     const tid=b.dataset.t;if(tid&&tareas[tid]){const n=Object.assign({},tareas[tid],{hecha:true,hechaF:HOY});tareas[tid]=n;render();save('tareas/'+tid,n)}
     return toast(d?'Listo. Vuelve '+fmt(addD(HOY,d)):'Listo');
   }
