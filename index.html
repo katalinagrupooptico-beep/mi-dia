@@ -675,17 +675,36 @@ function respuesta(id){
    <label>Detalle</label><input id="r-nota" placeholder="Ej. dice que transfiere el viernes">
    <div class="acts" style="margin-top:14px"><button class="b p" data-a="okResp" data-id="${esc(id)}">Guardar</button></div>
    ${(p.gestiones||[]).length?`<label>Historial de reclamos</label>${p.gestiones.slice().reverse().map(g=>`<div class="note"><b>${esc(fmt(g.f))}</b> ${esc(RESP[g.r])}${g.fp?' · para el '+esc(fmt(g.fp)):''}${g.monto?' · '+esc(money(g.monto)):''}${g.nota?' · '+esc(g.nota):''}</div>`).join('')}`:''}`);
-  const x=()=>{const r=$('r-ch').querySelector('.on').dataset.rr;$('r-x').innerHTML=r==='dias'?`<label>¿Para cuándo?</label><input type="date" id="r-fp" value="${addD(HOY,5)}">`:r==='parcial'?`<label>¿Cuánto pagó? ($)</label><input id="r-m" inputmode="numeric">`:''};x();
+  const x=()=>{const r=$('r-ch').querySelector('.on').dataset.rr;$('r-x').innerHTML=r==='dias'?`<label>¿Para cuándo?</label><input type="date" id="r-fp" value="${addD(HOY,5)}">`:r==='parcial'?`<label>¿Cuánto pagó? ($)</label><input id="r-m" inputmode="numeric">`:r==='pago'?`<label>¿Cuánto te mandó? ($)</label><input id="r-m" inputmode="numeric" value="${esc(p.monto||'')}">`:''};x();
   $('r-ch').onclick=e=>{const b=e.target.closest('[data-rr]');if(!b)return;$('r-ch').querySelectorAll('.b').forEach(y=>y.classList.toggle('on',y===b));x()};
+}
+const pFechaH=t=>{const m=String(t||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);if(!m)return '';const y=m[3].length===2?'20'+m[3]:m[3];return y+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0')};
+async function saldoHoja(p,n,g){
+  if(!p||!mcpG)return;
+  const tab=p.tipo==='Remito'?"'SALDOS REMITO'":"'SALDOS FACTURA'";
+  try{
+    const r=await gs('get_values',{range:tab+'!A:F'});const v=(r&&r.values)||[];
+    const nn=norm2(p.n);let best=-1,bs=0;
+    v.forEach((x,i)=>{if(!i||!x)return;let sc=0;if(pFechaH(x[0])===p.fecha)sc+=2;const cn=norm2(x[1]);if(cn&&(cn===nn||cn.includes(nn)||nn.includes(cn)))sc+=3;if(/KATALINA/i.test(x[2]||''))sc+=1;const im=Number(String(x[3]||'').replace(/[^0-9.,-]/g,'').replace(/,/g,''))||0;if(im&&Math.abs(im-Number(p.monto||0))<2)sc+=1;if(sc>bs){bs=sc;best=i}});
+    if(best<0||bs<5){toast('No encontré este saldo en tu hoja de trabajo');return}
+    const fila=best+1,[,mm,dd]=HOY.split('-'),fh=dd+'/'+mm,obs0=String(v[best][5]||'').trim();
+    const txt='Kata '+fh+': '+(g.r==='pago'?'pagó todo'+(g.monto?' ('+money(g.monto)+')':''):g.r==='parcial'?'pagó '+money(g.monto||0):RESP[g.r]+(g.fp?' para el '+fmt(g.fp):''))+(g.nota?' · '+g.nota:'');
+    const obs=obs0?obs0+' | '+txt:txt;
+    if(g.r==='pago')await gs('update_values',{range:tab+'!E'+fila+':F'+fila,values:[['SI',obs]]});
+    else if(g.r==='parcial')await gs('update_values',{range:tab+'!D'+fila+':F'+fila,values:[[Number(n.monto||0),'PARCIAL',obs]]});
+    else await gs('update_values',{range:tab+'!F'+fila,values:[[obs]]});
+    toast('Anotado en tu hoja de trabajo');
+  }catch(e){toast('No pude anotarlo en la hoja de trabajo')}
 }
 async function okResp(id){
   const p=cobros[id],r=$('r-ch').querySelector('.on').dataset.rr,nota=$('r-nota').value.trim();
   const g={f:HOY,r,nota};let n=Object.assign({},p);
   if(r==='dias'){g.fp=($('r-fp')||{}).value||addD(HOY,5);n.vence=g.fp}
   else if(r==='parcial'){g.monto=Number(String(($('r-m')||{}).value||'').replace(/\D/g,''))||0;n.monto=Math.max(0,Number(p.monto||0)-g.monto);n.parcial=true;n.vence=addD(HOY,7);if(!n.monto){n.estado='cobrado';n.cobradoF=HOY}}
-  else if(r==='pago'){n.estado='cobrado';n.cobradoF=HOY;n.cobradoMonto=p.monto}
+  else if(r==='pago'){g.monto=Number(String(($('r-m')||{}).value||'').replace(/\D/g,''))||Number(p.monto||0);n.estado='cobrado';n.cobradoF=HOY;n.cobradoMonto=g.monto}
   else n.vence=addD(HOY,r==='bien'?7:3);
   n.gestiones=(p.gestiones||[]).concat([g]);cobros[id]=n;close();render();await save('cobros/'+id,n);
+  saldoHoja(p,n,g);
   if(p.cid){const c=cli(p.cid);saveCli(p.cid,{notas:(c.notas||[]).concat([{f:HOY,t:'Cobro: '+RESP[r]+(nota?' · '+nota:'')}])})}
   toast(n.estado==='cobrado'?'¡Cobrado!':'Guardado. Volvés a reclamar el '+fmt(n.vence));
 }
@@ -1000,7 +1019,7 @@ document.body.addEventListener('click',async e=>{
   if(a==='okTarea'){const t=$('t-t').value.trim();if(!t)return toast('Escribí la tarea');const n={t,tipo:$('t-tipo').value,f:$('t-f').value||HOY,cid:$('t-c').value,hecha:false,por:'kata'};const k=newId('t');tareas[k]=n;close();render();save('tareas/'+k,n);return toast('Tarea cargada')}
   if(a==='okCobro'){const cid=$('p-c').value;if(!cid)return toast('Elegí la óptica');const k=id||newId('p');const n=Object.assign({},cobros[k]||{estado:'pendiente'},{cid,n:cli(cid).n,monto:Number(String($('p-m').value).replace(/\D/g,''))||0,vence:$('p-v').value,nota:$('p-n').value.trim(),tipo:($('p-tp').querySelector('.on')||{dataset:{tp:'Factura'}}).dataset.tp,fecha:(cobros[k]||{}).fecha||HOY});cobros[k]=n;close();render();save('cobros/'+k,n);return toast('Cobro guardado')}
   if(a==='delCobro'){delete cobros[id];close();render();return del('cobros/'+id)}
-  if(a==='cobrado'){const n=Object.assign({},cobros[id],{estado:'cobrado',cobradoF:HOY});cobros[id]=n;render();save('cobros/'+id,n);const c=cli(n.cid);saveCli(n.cid,{notas:(c.notas||[]).concat([{f:HOY,t:'Cobrado '+money(n.monto)}])});return toast('¡Cobrado!')}
+  if(a==='cobrado'){const p0=cobros[id],n=Object.assign({},p0,{estado:'cobrado',cobradoF:HOY});cobros[id]=n;render();save('cobros/'+id,n);saldoHoja(p0,n,{f:HOY,r:'pago',monto:Number(p0.monto||0)});const c=cli(n.cid);saveCli(n.cid,{notas:(c.notas||[]).concat([{f:HOY,t:'Cobrado '+money(n.monto)}])});return toast('¡Cobrado!')}
   if(a==='okCli'){const n=$('n-n').value.trim();if(!n)return toast('Falta el nombre');const k=newId('n');close();await saveCli(k,{nuevo:true,n,barrio:$('n-b').value.trim(),zona:$('n-z').value.trim(),dir:$('n-d').value.trim(),wa:$('n-w').value.replace(/\D/g,''),etapa:$('n-e').value,notas:[]});return toast('Óptica agregada')}
   if(a==='copiarRuta'){const t=[...st.rsel].map(i=>{const c=cli(i);return [c.dir,c.barrio,'Córdoba'].filter(Boolean).join(', ')}).join('\n');try{await navigator.clipboard.writeText(t);toast('Copiadas. Pegalas en Spoke')}catch(_){open(`<div class="hd"><h2>Direcciones</h2><button class="x" data-a="close">×</button></div><textarea style="min-height:240px">${esc(t)}</textarea>`)}return}
   if(a==='agendarRuta'){for(const i of st.rsel){const k=newId('t');const n={t:'Visitar '+cli(i).n,tipo:'visita',f:HOY,cid:i,hecha:false,por:'kata'};tareas[k]=n;await save('tareas/'+k,n)}toast(st.rsel.size+' visitas en Hoy');st.rsel=new Set();return render()}
