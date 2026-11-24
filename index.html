@@ -251,9 +251,10 @@ function ficha(id){
    <label>Historial</label>${(c.notas||[]).slice().reverse().map(n=>`<div class="note"><b>${esc(fmt(n.f))}</b> ${esc(n.t)}</div>`).join('')||'<div class="sub">Sin contactos registrados.</div>'}`);
 }
 function contacto(id,taskId){
-  const c=cli(id),nc=(c.notas||[]).length+1,esPros=c.etapa==='prospecto',defD=esPros?({1:3,2:7,3:15}[nc]||30):7,defM=esPros?(nc+1)+'º contacto':(c.motivo||'');
+  const c=cli(id),nc=(c.notas||[]).length+1,esPros=c.etapa==='prospecto',defD=esPros?({1:3,2:7,3:15}[nc]||30):7,defM=esPros?(nc+1)+'º contacto':(c.motivo||''),motA=st.motAct||(esPros?nc+'º contacto':(c.motivo||'Seguimiento'));st.motAct='';
   open(`<div class="hd"><h2>${esc(c.n)}: ¿qué pasó?</h2><button class="x" data-a="close" aria-label="Cerrar">×</button></div>
-   <textarea id="f-nota" placeholder="Ej. le mandé la promo Embó, dice que la semana que viene ve"></textarea>
+   <label>Motivo de este contacto</label><input id="f-mot" value="${esc(motA)}">
+   <label>Nota (opcional)</label><textarea id="f-nota" placeholder="Ej. le mandé la promo Embó, dice que la semana que viene ve"></textarea>
    <label>Volver a contactar</label>
    <div class="chips" id="f-ch">${[[3,'En 3 días'],[7,'1 semana'],[15,'15 días'],[30,'1 mes'],[0,'Sin fecha']].map(([d,t],i)=>`<button class="b${d===defD?' on':''}" data-d="${d}">${t}</button>`).join('')}</div>
    ${esPros?`<p class="sub">Este es el ${nc}º contacto. Te propongo volver a escribirle en ${defD} días.${nc>=5?' Si no viene respondiendo, pasá a una novedad por mes o pausá 2 o 3 meses.':''}</p>`:''}
@@ -861,7 +862,7 @@ function compose(cid,m,pid){
    <div id="m-nl"></div>
    <div class="acts" style="margin-top:12px"><button class="b" data-a="copiar">Copiar</button>${c.wa||!cid?`<a class="b w" id="m-wa" target="_blank" rel="noopener" href="#">Copiar y abrir WhatsApp</a>`:'<span class="sub">Sin WhatsApp cargado en la ficha.</span>'}${cid?`<button class="b" data-a="contacto" data-id="${esc(cid)}">Registrar contacto</button>`:''}</div>`);
   const upd=()=>{const a=$('m-wa');const tx=sinSig($('m-t').value);if(a)a.href=c.wa?waLink(c,tx):'https:\/\/wa.me/?text='+encodeURIComponent(tx)};upd();$('m-t').oninput=upd;
-  const a=$('m-wa');if(a)a.addEventListener('click',()=>{upd();try{navigator.clipboard.writeText(sinSig($('m-t').value))}catch(_){}});
+  const a=$('m-wa');if(a)a.addEventListener('click',()=>{upd();try{navigator.clipboard.writeText(sinSig($('m-t').value))}catch(_){}if(cid)setTimeout(()=>{st.motAct=MOTIVOS[cmp.m]||'';contacto(cid)},400)});
   $('m-ch').onclick=e=>{const b=e.target.closest('[data-mm]');if(!b)return;cmp.m=b.dataset.mm;$('m-ch').querySelectorAll('.b').forEach(x=>x.classList.toggle('on',x===b));$('m-t').value=sinSig(plantilla(cmp.m,c,p));upd()};
 }
 function chipsLinks(){return allLinks().map(([t],i)=>`<button class="b" data-a="addlink" data-i="${i}">+ ${esc(t)}</button>`).join('')+`<button class="b" data-a="nuevoLink">+ Guardar link nuevo</button>`}
@@ -870,7 +871,7 @@ function formLink(){
 }
 async function guardarLinks(L){const d={links:L,actualizado:HOY};difus['cfg-links']=d;await save('difusiones/cfg-links',d);const ch=$('m-links');if(ch)ch.innerHTML=chipsLinks()}
 const OPTAB="'OPERACIONES / CANTIDADES 2026'";
-async function marcarHoja(c,nota){
+async function marcarHoja(c,nota,mot){
   if(!c||!c.cod||!mcpG)return;
   try{
     const r=await gs('get_values',{range:OPTAB+'!B:B'});const v=(r&&r.values)||[];
@@ -878,7 +879,7 @@ async function marcarHoja(c,nota){
     if(i<0)return;
     const [y,m,d]=HOY.split('-');
     const fila=i+1;let vals=[d+'/'+m+'/'+y];
-    nota=String(nota||'').trim();
+    nota=[String(mot||'').trim(),String(nota||'').trim()].filter(Boolean).join(' · ');
     if(nota){let prev='';try{const z=await gs('get_values',{range:OPTAB+'!Z'+fila});prev=String((((z||{}).values||[])[0]||[])[0]||'').trim()}catch(_){}
       const t='Kata '+d+'/'+m+': '+nota;vals.push(prev?prev+' | '+t:t)}
     await gs('update_values',{range:OPTAB+'!Y'+fila+(vals.length>1?':Z'+fila:''),values:[vals]});
@@ -1013,9 +1014,10 @@ document.body.addEventListener('click',async e=>{
   if(a==='pos'){const m=addD(HOY,1);if(b.dataset.k==='t'){const n=Object.assign({},tareas[id],{f:m});tareas[id]=n;render();save('tareas/'+id,n)}else saveCli(id,{prox:m});return toast('Pasada a mañana')}
   if(a==='okContacto'){
     const c=cli(id),nota=$('f-nota').value.trim(),d=+($('f-ch').querySelector('.on')||{dataset:{d:7}}).dataset.d;
-    const notas=(c.notas||[]).concat(nota?[{f:HOY,t:nota}]:[{f:HOY,t:'Contactada'}]);
+    const mot=($('f-mot')||{}).value?$('f-mot').value.trim():'';
+    const notas=(c.notas||[]).concat([{f:HOY,t:[mot,nota].filter(Boolean).join(' · ')||'Contactada'}]);
     close();await saveCli(id,{notas,ultimo:HOY,hechoHoy:true,prox:d?addD(HOY,d):'',motivo:$('f-mot2')?.value||c.motivo||''});
-    marcarHoja(c,nota);
+    marcarHoja(c,nota,mot);
     const tid=b.dataset.t;if(tid&&tareas[tid]){const n=Object.assign({},tareas[tid],{hecha:true,hechaF:HOY});tareas[tid]=n;render();save('tareas/'+tid,n)}
     return toast(d?'Listo. Vuelve '+fmt(addD(HOY,d)):'Listo');
   }
