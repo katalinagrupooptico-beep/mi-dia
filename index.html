@@ -129,13 +129,13 @@ function plantilla(m,c,p){const nom='';switch(m){
  case 'mes1':return `Hola! ¿Cómo va? Ya pasó un mes del pedido, ¿cómo se están moviendo los modelos? ¿Hay alguno que se haya vendido rápido y quieras reponer?`;
  case 'mes2':return `Hola! ¿Cómo andás? Pasaron dos meses del último pedido. ¿Cómo vienen las ventas? Te puedo armar una reposición con lo que más salió y sumar algunas novedades.`;
  case 'gira':{const g=(st.gctx||{})[c.id]||{};return `Hola! ¿Cómo andás? ${g.fecha?'El '+new Date(g.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric'}):'Estos días'} voy a estar por ${g.loc||c.barrio||'tu zona'}${st.g&&st.g.mati?' con Mati, mi compañero del laboratorio,':''} con las novedades de Tiffany Occhiali, Union Pacific, Paul Riviere, Embó y Bend Flex. ¿Te puedo pasar a ver? ¿Qué horario te queda cómodo?`}
- case 'reposicion':return `Hola! ¿Cómo andás? Te escribo de Grupo Óptico. ${c.ultCompra?'Ya pasaron unos meses de tu última compra y ':''}entraron modelos nuevos de Tiffany Occhiali, Union Pacific y Paul Riviere. ¿Querés que te pase fotos o te paso a mostrar la valija?`;
- case 'reactivar':return `Hola! ¿Cómo va? Hace un tiempo que no hablamos y tenemos muchas novedades en armazones. Además hay financiación en cheques hasta junio 2027 para compras desde 100 piezas LGI. ¿Te paso a mostrar?`;
+ case 'reposicion':return `Hola! ¿Cómo andás? Te escribo de Grupo Óptico. ${c.ultCompra?'Ya pasaron unos meses de tu última compra y ':''}entraron modelos nuevos de Tiffany Occhiali, Union Pacific y Paul Riviere. Querés que te pase fotos o coordinamos una cita para que vean y conozcan la valija?`;
+ case 'reactivar':return `Hola! Cómo va? Hace un tiempo que no hablamos y tenemos muchas novedades en armazones. Además la financiación en cheques hasta 150 días o financiaciones disponibles que se adapten a vos.`;
  case 'cobro':return `Hola! ¿Cómo andás? Te escribo por el saldo pendiente${p&&p.monto?' de '+money(p.monto):''}${p&&p.fecha?' ('+(p.tipo==='Factura'?'factura ':'')+'del '+fmt(p.fecha)+')':''}. ¿Me confirmás cuándo lo podemos coordinar? ¡Gracias!`;
  case 'novedades':return `Hola! ¿Cómo estás? Llegaron modelos nuevos y me acordé de ustedes. ¿Te mando fotos o paso esta semana con la valija?`;
  case 'embo':return `Hola! Te escribo por la promo EMBÓ de este mes. ¿Cómo vienen con los modelos? Si querés reponer, avisame y lo armamos.`;
- case 'postvisita':return `Hola! Soy Katalina de Grupo Óptico, te acabo de visitar. ¡Gracias por recibirme! Agendame así te paso las novedades de Tiffany Occhiali, Union Pacific, Paul Riviere, Embó y Bend Flex. Acá tenés toda la info (lista de precios, formas de pago y catálogos): ${LT}`;
- case 'primera':return `Hola! ¿Cómo estás? Soy Katalina, de Grupo Óptico. ${c.origen==='Laboratorio'?'Ya trabajan con nuestro laboratorio y ahora también les puedo ofrecer armazones: ':'Distribuyo en Córdoba '}Tiffany Occhiali, Union Pacific, Paul Riviere, Embó y Bend Flex. Me encantaría pasar a mostrarles la valija. Te dejo toda la info: ${LT}`;
+ case 'postvisita':return `Hola! Soy Katalina de Grupo Óptico, acabo de visitarte. Gracias por recibirme! Agendame así te paso las novedades de Tiffany Occhiali, Union Pacific, Paul Riviere, Embó y Bend Flex. Acá tenés toda la info que también te deje en la tarjeta de contacto (lista de precios, formas de pago y catálogos): ${LT}`;
+ case 'primera':return `Hola! ¿Cómo estás? Soy Katalina, de Grupo Óptico. ${c.origen==='Laboratorio'?'Ya trabajan con nuestro laboratorio y ahora también les puedo ofrecer armazones: ':'Distribuimos en Córdoba las marcas '}Tiffany Occhiali, Union Pacific, Paul Riviere, Embó y Bend Flex. Me encantaría pasar a mostrarles la valija. Te dejo toda la info: ${LT}`;
  default:return 'Hola! ¿Cómo andás? Te escribo de Grupo Óptico. ';}}
 const motivoDe=(c,tipo)=>tipo==='cobro'?'cobro':c.etapa==='prospecto'&&(c.notas||[]).length?'seguimiento':/repos/i.test(c.accion||'')?'reposicion':/reactiv|recuper/i.test(c.accion||'')?'reactivar':c.etapa==='prospecto'?'primera':'novedades';
 let st={vt:'pedidos',inf:null,g:{dias:1,ida:'',porDia:8,mati:false,zona:'',locs:[],plan:null},gctx:{},nv:{imgs:[],marca:'Tiffany Occhiali',titulo:'Nuevos ingresos',cierre:'go',src:'catalogo',fm:'',fc:'',solo:true,sel:new Set(),rec:true},cq:'',ce:'mes',cz:'',cb:'',rb:'',rsel:new Set(),cobF:'pendiente',cobT:''};
@@ -251,12 +251,12 @@ function ficha(id){
    <label>Historial</label>${(c.notas||[]).slice().reverse().map(n=>`<div class="note"><b>${esc(fmt(n.f))}</b> ${esc(n.t)}</div>`).join('')||'<div class="sub">Sin contactos registrados.</div>'}`);
 }
 function contacto(id,taskId){
-  const c=cli(id),nc=(c.notas||[]).length+1,esPros=c.etapa==='prospecto',defD=esPros?({1:7,2:15}[nc]||30):7,defM=esPros?(nc+1)+'º contacto':(c.motivo||'');
+  const c=cli(id),nc=(c.notas||[]).length+1,esPros=c.etapa==='prospecto',defD=esPros?({1:3,2:7,3:15}[nc]||30):7,defM=esPros?(nc+1)+'º contacto':(c.motivo||'');
   open(`<div class="hd"><h2>${esc(c.n)}: ¿qué pasó?</h2><button class="x" data-a="close" aria-label="Cerrar">×</button></div>
    <textarea id="f-nota" placeholder="Ej. le mandé la promo Embó, dice que la semana que viene ve"></textarea>
    <label>Volver a contactar</label>
    <div class="chips" id="f-ch">${[[3,'En 3 días'],[7,'1 semana'],[15,'15 días'],[30,'1 mes'],[0,'Sin fecha']].map(([d,t],i)=>`<button class="b${d===defD?' on':''}" data-d="${d}">${t}</button>`).join('')}</div>
-   ${esPros?`<p class="sub">Este es el ${nc}º contacto. Te propongo volver a escribirle en ${defD} días.</p>`:''}
+   ${esPros?`<p class="sub">Este es el ${nc}º contacto. Te propongo volver a escribirle en ${defD} días.${nc>=5?' Si no viene respondiendo, pasá a una novedad por mes o pausá 2 o 3 meses.':''}</p>`:''}
    <label>Motivo del próximo contacto</label><input id="f-mot2" value="${esc(defM)}">
    <div class="acts" style="margin-top:14px"><button class="b p" data-a="okContacto" data-id="${esc(id)}" data-t="${esc(taskId||'')}">Guardar</button></div>`);
   $('f-ch').onclick=e=>{const b=e.target.closest('[data-d]');if(!b)return;$('f-ch').querySelectorAll('.b').forEach(x=>x.classList.toggle('on',x===b))};
