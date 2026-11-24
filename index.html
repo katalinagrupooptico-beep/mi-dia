@@ -774,7 +774,7 @@ async function okVenta(btn){
   try{const col=await gs('get_values',{spreadsheetId:PSSID,range:'PEDIDOS!C:C'});const fila=Math.max(2,((col&&col.values)||[]).length+1);await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!A${fila}:O${fila}`,values:[[id,fDate(f),c.n,det,m||'','En preparación','','','','','','','','','Katalina']]})}
   catch(e){btn.disabled=false;btn.textContent='Guardar en PEDIDOS';return toast(vErrTxt(e))}
   pseg[id]={cid,seg:{}};save('pseg/'+id,pseg[id]);close();
-  saveCli(cid,{notas:(c.notas||[]).concat([{f,t:'Venta: '+(det||'pedido')}]),ultimo:HOY});marcarHoja(c);
+  saveCli(cid,{notas:(c.notas||[]).concat([{f,t:'Venta: '+(det||'pedido')}]),ultimo:HOY});marcarHoja(c,'Venta: '+(det||'pedido'));
   toast('Venta cargada en PEDIDOS');cargarPedidos();
 }
 function editPed(id){
@@ -870,14 +870,18 @@ function formLink(){
 }
 async function guardarLinks(L){const d={links:L,actualizado:HOY};difus['cfg-links']=d;await save('difusiones/cfg-links',d);const ch=$('m-links');if(ch)ch.innerHTML=chipsLinks()}
 const OPTAB="'OPERACIONES / CANTIDADES 2026'";
-async function marcarHoja(c){
+async function marcarHoja(c,nota){
   if(!c||!c.cod||!mcpG)return;
   try{
     const r=await gs('get_values',{range:OPTAB+'!B:B'});const v=(r&&r.values)||[];
     const tag='['+String(c.cod).trim()+']';const i=v.findIndex(x=>x&&String(x[0]||'').includes(tag));
     if(i<0)return;
     const [y,m,d]=HOY.split('-');
-    await gs('update_values',{range:OPTAB+'!Y'+(i+1),values:[[d+'/'+m+'/'+y]]});
+    const fila=i+1;let vals=[d+'/'+m+'/'+y];
+    nota=String(nota||'').trim();
+    if(nota){let prev='';try{const z=await gs('get_values',{range:OPTAB+'!Z'+fila});prev=String((((z||{}).values||[])[0]||[])[0]||'').trim()}catch(_){}
+      const t='Kata '+d+'/'+m+': '+nota;vals.push(prev?prev+' | '+t:t)}
+    await gs('update_values',{range:OPTAB+'!Y'+fila+(vals.length>1?':Z'+fila:''),values:[vals]});
     toast('Anotado en tu hoja de trabajo');
   }catch(e){toast('No pude anotarlo en la hoja de trabajo')}
 }
@@ -1011,7 +1015,7 @@ document.body.addEventListener('click',async e=>{
     const c=cli(id),nota=$('f-nota').value.trim(),d=+($('f-ch').querySelector('.on')||{dataset:{d:7}}).dataset.d;
     const notas=(c.notas||[]).concat(nota?[{f:HOY,t:nota}]:[{f:HOY,t:'Contactada'}]);
     close();await saveCli(id,{notas,ultimo:HOY,hechoHoy:true,prox:d?addD(HOY,d):'',motivo:$('f-mot2')?.value||c.motivo||''});
-    marcarHoja(c);
+    marcarHoja(c,nota);
     const tid=b.dataset.t;if(tid&&tareas[tid]){const n=Object.assign({},tareas[tid],{hecha:true,hechaF:HOY});tareas[tid]=n;render();save('tareas/'+tid,n)}
     return toast(d?'Listo. Vuelve '+fmt(addD(HOY,d)):'Listo');
   }
