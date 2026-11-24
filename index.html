@@ -158,6 +158,21 @@ const saveCli=(id,patch)=>{const o=Object.assign({},ov[id]||{},patch);ov[id]=o;r
 const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
  
+function manana(sec){
+  const d=nextHabil(addD(HOY,1)),vis=sec==='vis';
+  const T=Object.entries(tareas).filter(([,t])=>!t.hecha&&t.f>HOY&&t.f<=d&&((t.tipo==='visita')===vis));
+  const C=vis?[]:allCli().filter(c=>c.prox&&c.prox>HOY&&c.prox<=d&&c.etapa!=='descartado');
+  const P=vis?[]:Object.entries(cobros).filter(([,p])=>p.estado==='pendiente'&&!p.noReclamar&&p.vence&&p.vence>HOY&&p.vence<=d);
+  return {d,T,C,P,n:T.length+C.length+P.length};
+}
+const nomDia=d=>{const w=new Date(d+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long'});return d===addD(HOY,1)?'mañana':'el '+w};
+async function adelantar(sec){
+  const m=manana(sec);if(!m.n)return;
+  for(const [id,t] of m.T){const n=Object.assign({},t,{f:HOY});tareas[id]=n;save('tareas/'+id,n)}
+  for(const c of m.C)saveCli(c.id,{prox:HOY});
+  for(const [id,p] of m.P){const n=Object.assign({},p,{vence:HOY});cobros[id]=n;save('cobros/'+id,n)}
+  render();toast('Sumé '+m.n+' a hoy');
+}
 function itemsHoy(){
   const L=[];
   for(const [id,t] of Object.entries(tareas)){
@@ -201,7 +216,13 @@ function itemHTML(x){
 function renderHoy(){
   const L=itemsHoy(),done=L.filter(x=>x.hecha).length,tot=L.length,p=tot?done/tot:0;
   const R=30,C=2*Math.PI*R;
-  const groups=['seg','cobro','visita','estado','otro'].map(g=>[g,L.filter(x=>x.tipo===g)]).filter(g=>g[1].length);
+  const SEC=[['msj','Mensajes','Seguimientos, cobros, estados y avisos por WhatsApp',['seg','cobro','estado','otro']],['vis','Visitas','Ópticas para visitar',['visita']]];
+  const secHTML=([k,tit,sub,tipos])=>{const xs=L.filter(x=>tipos.includes(x.tipo)),pend=xs.filter(x=>!x.hecha).length,nm=manana(k).n;
+    if(!xs.length&&!nm)return '';
+    const gs=tipos.map(g=>[g,xs.filter(x=>x.tipo===g)]).filter(g=>g[1].length);
+    return `<div class="sec" style="margin-top:22px"><h2>${tit}</h2><span>${xs.length?(pend?pend+' pendientes':'terminado'):'nada para hoy'}</span></div>
+     ${gs.map(([g,ys])=>(gs.length>1?`<div class="sub" style="margin:10px 0 4px;font-weight:600">${TIPOS[g]}</div>`:'')+ys.map(itemHTML).join('')).join('')}
+     ${nm?`<button class="b${pend?'':' p'}" data-a="adelantar" data-v="${k}" style="width:100%;margin-top:8px">${pend?'':'Terminaste. '}Sumar lo de ${esc(nomDia(manana(k).d))} (${nm})</button>`:''}`};
   const mesN=allCli().filter(delMes).length;const slL=itemsSL(HOY),slOk=(slab[HOY]||{}).ok||{},slP=slL.filter(x=>!slOk[x.k]).length,tarde=+new Date().toLocaleString('en-US',{timeZone:TZ,hour:'numeric',hour12:false})>=17;
   const man=Object.values(tareas).filter(t=>!t.hecha&&t.f===addD(HOY,1)).length+allCli().filter(c=>c.prox===addD(HOY,1)).length;
   $('nb').innerHTML=tot-done?`<span class="badge">${tot-done}</span>`:'';
@@ -210,7 +231,7 @@ function renderHoy(){
    <div class="row" style="margin-bottom:6px;gap:6px"><button class="b p" data-a="nueva">+ Tarea</button><button class="b" data-a="nuevoCobro">+ Cobro</button><button class="b" data-a="nuevaVenta">+ Venta</button><button class="b" data-a="difusion">Difusión</button><button class="b" data-a="msgLibre">Mensaje</button><button class="b" data-a="smartlab">Smart Lab</button><button class="b" data-a="viaticos">Viáticos</button><button class="b" data-a="informe">Informe del mes</button></div>
    ${tarde&&slP?`<button class="it alarm" data-a="smartlab" style="width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit"><div class="bd"><div class="tt">Cerrá el día: ${slP} cosa${slP>1?'s':''} para cargar en Smart Lab</div><div class="sub">Visitas y contactos de hoy, listos para pasar.</div></div></button>`:''}
    ${mesN?`<button class="it" data-a="verMes" style="width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit"><div class="bd"><div class="tt">Tu hoja: ${mesN} ópticas para contactar este mes</div><div class="sub">Las de segmento A primero. Tocá para verlas.</div></div></button>`:''}
-   ${groups.length?groups.map(([g,xs])=>`<div class="sec"><h2>${TIPOS[g]}</h2><span>${xs.filter(x=>!x.hecha).length} pendientes</span></div>${xs.map(itemHTML).join('')}`).join(''):'<div class="empty" style="margin-top:16px">No hay nada para hoy todavía. Cargá una tarea o esperá las sugeridas de la mañana.</div>'}
+   ${(()=>{const h=SEC.map(secHTML).join('');return h||'<div class="empty" style="margin-top:16px">No hay nada para hoy todavía. Cargá una tarea o esperá las sugeridas de la mañana.</div>'})()}
    ${man?`<p class="sub" style="margin-top:18px">Mañana: ${man} tarea${man>1?'s':''} programada${man>1?'s':''}.</p>`:''}`;
 }
 
@@ -1012,6 +1033,7 @@ document.body.addEventListener('click',async e=>{
     if(k==='p')return respuesta(id);
     if(k==='v'){const [pid,step]=id.split(':');const p=pedidos[pid];const sg=Object.assign({},p.seg||{},{[step]:true});pseg[pid]={cid:p.cid||'',seg:sg};pedidos[pid]=Object.assign({},p,{seg:sg});render();save('pseg/'+pid,pseg[pid]);if(p.cid){const c=cli(p.cid);saveCli(p.cid,{notas:(c.notas||[]).concat([{f:HOY,t:'Postventa: '+(step==='aviso'?'aviso de despacho':({fact:'facturación consultada',falt:'aviso de faltantes / monto final'}[step]||(POSTV.find(x=>x[0]===step)||[,,step])[2]))}]),ultimo:HOY})}return toast('Hecho')}
   }
+  if(a==='adelantar')return adelantar(b.dataset.v);
   if(a==='pos'){const m=addD(HOY,1);if(b.dataset.k==='t'){const n=Object.assign({},tareas[id],{f:m});tareas[id]=n;render();save('tareas/'+id,n)}else saveCli(id,{prox:m});return toast('Pasada a mañana')}
   if(a==='okContacto'){
     const c=cli(id),nota=$('f-nota').value.trim(),d=+($('f-ch').querySelector('.on')||{dataset:{d:7}}).dataset.d;
