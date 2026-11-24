@@ -755,7 +755,7 @@ async function okVenta(btn){
   try{const col=await gs('get_values',{spreadsheetId:PSSID,range:'PEDIDOS!C:C'});const fila=Math.max(2,((col&&col.values)||[]).length+1);await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!A${fila}:O${fila}`,values:[[id,fDate(f),c.n,det,m||'','En preparación','','','','','','','','','Katalina']]})}
   catch(e){btn.disabled=false;btn.textContent='Guardar en PEDIDOS';return toast(vErrTxt(e))}
   pseg[id]={cid,seg:{}};save('pseg/'+id,pseg[id]);close();
-  saveCli(cid,{notas:(c.notas||[]).concat([{f,t:'Venta: '+(det||'pedido')}]),ultimo:HOY});
+  saveCli(cid,{notas:(c.notas||[]).concat([{f,t:'Venta: '+(det||'pedido')}]),ultimo:HOY});marcarHoja(c);
   toast('Venta cargada en PEDIDOS');cargarPedidos();
 }
 function editPed(id){
@@ -850,6 +850,18 @@ function formLink(){
   const L=misLinks();$('m-nl').innerHTML=`<div class="card" style="margin-top:8px;padding:12px"><label>Nombre</label><input id="nl-t" placeholder="Ej. Catálogo Embó, video Union Pacific"><label>Link</label><input id="nl-u" placeholder="Pegá el link" inputmode="url"><div class="acts" style="margin-top:8px"><button class="b p" data-a="okLink">Guardar</button><button class="b" data-a="noLink">Cancelar</button></div>${L.length?`<div class="sub" style="margin-top:10px">Tus links</div>`+L.map(([t],i)=>`<div class="it" style="align-items:center"><div class="bd"><div class="tt">${esc(t)}</div></div><button class="b" data-a="delLink" data-i="${i}">Borrar</button></div>`).join(''):''}</div>`;
 }
 async function guardarLinks(L){const d={links:L,actualizado:HOY};difus['cfg-links']=d;await save('difusiones/cfg-links',d);const ch=$('m-links');if(ch)ch.innerHTML=chipsLinks()}
+const OPTAB="'OPERACIONES / CANTIDADES 2026'";
+async function marcarHoja(c){
+  if(!c||!c.cod||!mcpG)return;
+  try{
+    const r=await gs('get_values',{range:OPTAB+'!B:B'});const v=(r&&r.values)||[];
+    const tag='['+String(c.cod).trim()+']';const i=v.findIndex(x=>x&&String(x[0]||'').includes(tag));
+    if(i<0)return;
+    const [y,m,d]=HOY.split('-');
+    await gs('update_values',{range:OPTAB+'!Y'+(i+1),values:[[d+'/'+m+'/'+y]]});
+    toast('Anotado en tu hoja de trabajo');
+  }catch(e){toast('No pude anotarlo en la hoja de trabajo')}
+}
 async function escribirIA(btn){
   const c=cmp.cid?cli(cmp.cid):{},p=cmp.pid?cobros[cmp.pid]:null,why=($('m-why')||{}).value||'';
   const datos={optica:c.n,etapa:c.etapa,segmento:c.sgm,accion:c.accion,ultimaCompra:c.ultCompra,mesesSinCompra:c.meses,unidades2026:c.tot,notaHoja:c.notaHoja,observacion:c.obs,ultimasNotas:(c.notas||[]).slice(-3),saldo:p?{monto:p.monto,tipo:p.tipo,fecha:p.fecha}:null,origen:c.origen};
@@ -876,7 +888,7 @@ async function guardarRapido(){
   const n=$('r-n').value.trim();if(!n){toast('Falta el nombre');return}
   const d=$('r-d').value.trim(),q=$('r-q').value.trim(),o=$('r-o').value.trim(),k=newId('n');
   const nota=['Primera visita',q?'atendió '+q:'',o].filter(Boolean).join(' · ');
-  close();await saveCli(k,{nuevo:true,n,wa:telWa($('r-t')?.value||'')||'',dir:/^https:[/][/]/.test(d)?'':d,mapa:/^https:[/][/]/.test(d)?d:'',barrio:$('r-b')?.value.trim()||'',zona:'',etapa:'prospecto',origen:'Visita',notas:[{f:HOY,t:nota}],ultimo:HOY,hechoHoy:true,prox:addD(HOY,7),motivo:'2º contacto (lo visitaste el '+fmt(HOY)+')'});
+  close();await saveCli(k,{nuevo:true,n,wa:telWa($('r-t')?.value||'')||'',dir:/^https:[/][/]/.test(d)?'':d,mapa:/^https:[/][/]/.test(d)?d:'',barrio:$('r-b')?.value.trim()||'',zona:'',etapa:'prospecto',origen:'Visita',notas:[{f:HOY,t:nota}],ultimo:HOY,hechoHoy:true,prox:addD(HOY,3),motivo:'2º contacto (lo visitaste el '+fmt(HOY)+')'});
   toast('Agendada: '+n);
 }
  
@@ -980,6 +992,7 @@ document.body.addEventListener('click',async e=>{
     const c=cli(id),nota=$('f-nota').value.trim(),d=+($('f-ch').querySelector('.on')||{dataset:{d:7}}).dataset.d;
     const notas=(c.notas||[]).concat(nota?[{f:HOY,t:nota}]:[{f:HOY,t:'Contactada'}]);
     close();await saveCli(id,{notas,ultimo:HOY,hechoHoy:true,prox:d?addD(HOY,d):'',motivo:$('f-mot2')?.value||c.motivo||''});
+    marcarHoja(c);
     const tid=b.dataset.t;if(tid&&tareas[tid]){const n=Object.assign({},tareas[tid],{hecha:true,hechaF:HOY});tareas[tid]=n;render();save('tareas/'+tid,n)}
     return toast(d?'Listo. Vuelve '+fmt(addD(HOY,d)):'Listo');
   }
