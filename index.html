@@ -295,7 +295,8 @@ function renderCobros(){
 }
 function formCobro(cid,id){
   const p=id?cobros[id]:{cid:cid||'',estado:'pendiente',vence:addD(HOY,7)};
-  const opts=allCli().filter(c=>c.etapa!=='descartado').sort((a,b)=>a.n.localeCompare(b.n));
+  const conSaldo=new Set(Object.values(cobros).map(x=>x.cid).filter(Boolean));if(p.cid)conSaldo.add(p.cid);
+  const opts=allCli().filter(c=>conSaldo.has(c.id)).sort((a,b)=>a.n.localeCompare(b.n));
   setTimeout(()=>{const t=$('p-tp');if(t)t.onclick=e=>{const b=e.target.closest('[data-tp]');if(!b)return;t.querySelectorAll('.b').forEach(y=>y.classList.toggle('on',y===b))}},0);
   open(`<div class="hd"><h2>${id?'Editar cobro':'Nuevo cobro'}</h2><button class="x" data-a="close" aria-label="Cerrar">×</button></div>
    <label>Óptica</label><select id="p-c"><option value="">Elegí…</option>${opts.map(c=>`<option value="${esc(c.id)}"${c.id===p.cid?' selected':''}>${esc(c.n)}</option>`).join('')}</select>
