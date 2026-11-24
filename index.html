@@ -117,6 +117,8 @@ const sinSig=t=>String(t==null?'':t).replace(/[¿¡]/g,'');
 const BLOQUES=[['Financiación','Hay financiación en cheques hasta el 30/06/2027 para compras desde 100 piezas LGI.'],['Promo Embó','Sigue la promo EMBÓ hasta el 31/03/2027, preguntame cómo aprovecharla.'],['15% Bend','Comprando LGI tenés 15% de descuento en Bend Flex.'],['Paso con la valija','Si querés paso esta semana con la valija y te muestro todo.']];
 const misLinks=()=>((difus['cfg-links']||{}).links||[]).filter(x=>x&&x[0]&&x[1]);
 const allLinks=()=>LINKS.concat(misLinks());
+const FRASE_LINK={'Mi Linktree':'Además te dejo el link que contiene el QR que está en mi tarjeta de contacto, ahí tenés toda la info:','Lista de precios':'Te dejo acceso rápido a la lista de precios:','Formas de pago':'Te dejo las formas de pago:','Catálogo LGI':'Acá podés ver el catálogo de LGI con todos los modelos:','Catálogo Bend Flex':'Y acá el catálogo de Bend Flex:'};
+const fraseLink=(n,u)=>(FRASE_LINK[n]||('Te dejo '+n.charAt(0).toLowerCase()+n.slice(1)+':'))+' '+u;
 const MOTIVOS={faltantes:'Faltantes / monto final',seguimiento:'Seguimiento',pedido:'Pedido despachado',postventa:'Cómo llegó',mes1:'Pasó un mes',mes2:'Pasaron dos meses',gira:'Aviso de gira',reposicion:'Reposición',reactivar:'Reactivar',cobro:'Cobro',novedades:'Novedades',embo:'Promo Embó',postvisita:'Post visita',primera:'Primera presentación',otro:'Otro'};
 const telWa=t=>{let d=String(t||'').replace(/\D/g,'');if(d.startsWith('54'))d=d.slice(2);if(d.startsWith('9')&&d.length===11)d=d.slice(1);d=d.replace(/^0/,'');if(d.length===12){for(const p of [3,4,2])if(d.substr(p,2)==='15'){d=d.slice(0,p)+d.slice(p+2);break}}if(d.length===9&&d.startsWith('15'))d=d.slice(2);if(d.length===7)d='351'+d;return d.length===10?'549'+d:''};
 function plantilla(m,c,p){const nom='';switch(m){
@@ -136,7 +138,7 @@ function plantilla(m,c,p){const nom='';switch(m){
  case 'primera':return `Hola! ¿Cómo estás? Soy Katalina, de Grupo Óptico. ${c.origen==='Laboratorio'?'Ya trabajan con nuestro laboratorio y ahora también les puedo ofrecer armazones: ':'Distribuyo en Córdoba '}Tiffany Occhiali, Union Pacific, Paul Riviere, Embó y Bend Flex. Me encantaría pasar a mostrarles la valija. Te dejo toda la info: ${LT}`;
  default:return 'Hola! ¿Cómo andás? Te escribo de Grupo Óptico. ';}}
 const motivoDe=(c,tipo)=>tipo==='cobro'?'cobro':c.etapa==='prospecto'&&(c.notas||[]).length?'seguimiento':/repos/i.test(c.accion||'')?'reposicion':/reactiv|recuper/i.test(c.accion||'')?'reactivar':c.etapa==='prospecto'?'primera':'novedades';
-let st={vt:'pedidos',inf:null,g:{dias:1,ida:'',porDia:8,mati:false,zona:'',locs:[],plan:null},gctx:{},nv:{imgs:[],marca:'Tiffany Occhiali',titulo:'Nuevos ingresos',cierre:'go',src:'catalogo',fm:'',fc:'',solo:true,sel:new Set(),rec:true},cq:'',ce:'mes',cz:'',rb:'',rsel:new Set(),cobF:'pendiente',cobT:''};
+let st={vt:'pedidos',inf:null,g:{dias:1,ida:'',porDia:8,mati:false,zona:'',locs:[],plan:null},gctx:{},nv:{imgs:[],marca:'Tiffany Occhiali',titulo:'Nuevos ingresos',cierre:'go',src:'catalogo',fm:'',fc:'',solo:true,sel:new Set(),rec:true},cq:'',ce:'mes',cz:'',cb:'',rb:'',rsel:new Set(),cobF:'pendiente',cobT:''};
 const TIPOL=t=>t==='Remito'?'En 02':t==='Factura'?'Facturado':(t||'');
 
 const cli=id=>{const b=base.find(c=>c.id===id)||{};return Object.assign({},b,ov[id]||{},{id})};
@@ -215,20 +217,23 @@ function renderHoy(){
  
 function renderClientes(){
   const all=allCli(),q=st.cq.toLowerCase();
-  const zonas=[...new Set(all.map(c=>c.zona).filter(Boolean))].sort();
-  let L=all.filter(c=>(!st.ce||(st.ce==='mes'?delMes(c):c.etapa===st.ce))&&(!st.cz||c.zona===st.cz)&&(!q||[c.n,c.rs,c.barrio,c.dir].join(' ').toLowerCase().includes(q)));
+  const zonas=[...new Set(all.map(zonaG).filter(Boolean))].sort((a,b)=>(a==='Córdoba Capital'?-2:a==='Sierras Chicas'?-1:0)-(b==='Córdoba Capital'?-2:b==='Sierras Chicas'?-1:0)||a.localeCompare(b));
+  if(st.cz&&!zonas.includes(st.cz)){st.cz='';st.cb=''}
+  const locsZ=st.cz?[...new Set(all.filter(c=>zonaG(c)===st.cz).map(locG).filter(Boolean))].sort((a,b)=>(a==='Otros / sin barrio')-(b==='Otros / sin barrio')||a.localeCompare(b)):[];
+  if(st.cb&&!locsZ.includes(st.cb))st.cb='';
+  let L=all.filter(c=>(!st.ce||(st.ce==='mes'?delMes(c):c.etapa===st.ce))&&(!st.cz||zonaG(c)===st.cz)&&(!st.cb||locG(c)===st.cb)&&(!q||[c.n,c.rs,c.barrio,c.dir].join(' ').toLowerCase().includes(q)));
   const SG={A:0,B:1,C:2};L.sort((a,b)=>st.ce==='mes'?((SG[a.sgm]??3)-(SG[b.sgm]??3)||(a.zona||'').localeCompare(b.zona||'')||(a.barrio||'').localeCompare(b.barrio||'')):((a.prox||'9').localeCompare(b.prox||'9')||a.n.localeCompare(b.n)));
   const cnt=e=>all.filter(c=>c.etapa===e).length;
   $('v-clientes').innerHTML=`<div class="top"><div class="d"><h1>Clientes</h1><small style="margin-top:6px">${all.length} ópticas</small></div><button class="b p" data-a="nuevoCli">+ Nuevo</button></div>
    <input id="cq" type="search" placeholder="Buscar óptica, barrio o dirección" value="${esc(st.cq)}">
    <div class="chips" style="margin-top:8px">${[['mes','Este mes'],['','Todas']].concat(Object.entries(ETAPAS)).map(([k,v])=>`<button class="b${st.ce===k?' on':''}" data-a="ce" data-v="${k}">${v}${k==='mes'?' '+all.filter(delMes).length:k?' '+cnt(k):''}</button>`).join('')}</div>
-   <select id="cz" style="margin:6px 0 12px"><option value="">Todas las zonas</option>${zonas.map(z=>`<option${z===st.cz?' selected':''}>${esc(z)}</option>`).join('')}</select>
-   ${L.slice(0,120).map(c=>`<div class="it"><div class="bd"><div class="tt">${esc(c.n)}</div><div class="sub">${esc([c.barrio,c.zona].filter(Boolean).join(' · '))}</div>
+   <div class="row" style="margin:6px 0 12px"><div><select id="cz"><option value="">Todas las zonas</option>${zonas.map(z=>`<option${z===st.cz?' selected':''}>${esc(z)}</option>`).join('')}</select></div>${st.cz?`<div><select id="cb"><option value="">${st.cz==='Córdoba Capital'?'Todos los barrios':'Todas las localidades'}</option>${locsZ.map(z=>`<option${z===st.cb?' selected':''}>${esc(z)}</option>`).join('')}</select></div>`:''}</div>
+   ${L.slice(0,120).map(c=>`<div class="it"><div class="bd"><div class="tt">${esc(c.n)}</div><div class="sub">${esc([locG(c)||c.barrio,zonaG(c)].filter(Boolean).join(' · '))}</div>
      <div class="acts"><span class="tag">${ETAPAS[c.etapa]||''}</span>${c.sgm?`<span class="tag">${esc(c.sgm)}</span>`:''}${c.accion?`<span class="tag">${esc(c.accion.toLowerCase())}</span>`:''}${c.noVisita?'<span class="tag">solo WhatsApp</span>':''}${c.prox?`<span class="tag${c.prox<HOY?' c':''}">Seguir ${esc(fmt(c.prox))}</span>`:''}${c.meses!=null&&c.meses!==''?`<span class="tag">${esc(c.meses)} m sin comprar</span>`:''}
      <button class="b" data-a="ficha" data-id="${esc(c.id)}">Abrir</button></div></div></div>`).join('')||'<div class="empty">Nada con ese filtro.</div>'}
    ${L.length>120?`<p class="sub">Mostrando 120 de ${L.length}. Afiná la búsqueda.</p>`:''}`;
   const i=$('cq');i.oninput=()=>{st.cq=i.value;clearTimeout(i.t);i.t=setTimeout(()=>{renderClientes();const n=$('cq');n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
-  $('cz').onchange=e=>{st.cz=e.target.value;renderClientes()};
+  $('cz').onchange=e=>{st.cz=e.target.value;st.cb='';renderClientes()};if($('cb'))$('cb').onchange=e=>{st.cb=e.target.value;renderClientes()};
 }
 function ficha(id){
   const c=cli(id),ps=Object.entries(cobros).filter(([,p])=>p.cid===id);
@@ -727,9 +732,9 @@ function renderPedidos(){
   const L=Object.entries(pedidos).sort((a,b)=>(b[1].f||'').localeCompare(a[1].f||''));
   const cnt=k=>L.filter(([,p])=>p.estado===k).length;
   $('v-cobros').innerHTML=`${segVentas()}<div class="top"><div class="d"><h1>Pedidos</h1><small style="margin-top:6px">${cnt('preparacion')} en preparación · ${cnt('facturado')} facturados · ${cnt('despachado')} despachados</small></div><button class="b p" data-a="nuevaVenta">+ Venta</button></div>
-   <div class="acts" style="margin:0 0 10px"><button class="b" data-a="pedReload">Actualizar</button><a class="b" href="${PWEB}" target="_blank" rel="noopener">Página de pedidos</a><button class="b" data-a="copiarPWeb">Copiar link para administración</button></div>
+   <div class="acts" style="margin:0 0 10px"><button class="b" data-a="pedReload">Actualizar</button></div>
    ${pedErr?`<div class="note" style="border-color:var(--co)">${esc(vErrTxt({code:pedErr}))}</div>`:''}
-   <p class="sub" style="margin-top:0">Administración completa estado, factura, faltantes, despacho y comprobante desde su página de pedidos (sin registrarse).</p>
+   <p class="sub" style="margin-top:0">Tocá Actualizar en cada pedido para cargar estado, factura, faltantes, despacho y comprobante.</p>
    ${L.map(([id,p])=>`<div class="it"><div class="bd"><div class="tt">${esc(p.n)}</div><div class="sub">${esc(['Venta del '+fmt(p.f),p.monto?'vendido '+money(p.monto):'',p.fechaFact?'facturado '+fmt(p.fechaFact)+(p.tipoFact==='Remito'?' (en 02)':''):(p.f?'factura aprox. '+fmt(addD(p.f,7)):''),p.entregaEst?'llega aprox. '+fmt(p.entregaEst):''].filter(Boolean).join(' · '))}</div>${p.montoFact!=null&&Number(p.montoFact)!==Number(p.monto||0)?`<div class="sub" style="color:var(--co)">Monto final ${esc(money(p.montoFact))} (${esc(money(Number(p.montoFact)-Number(p.monto||0)))})${p.faltantes?' · faltaron: '+esc(p.faltantes):''}</div>`:p.faltantes?`<div class="sub" style="color:var(--co)">Faltaron: ${esc(p.faltantes)}</div>`:''}
     ${p.detalle?`<div class="sub">${esc(p.detalle)}</div>`:''}${p.notaCliente?`<div class="note"><b>Para el cliente:</b> ${esc(p.notaCliente)}</div>`:''}
     <div class="acts"><span class="tag${p.estado==='preparacion'?' c':''}">${esc(ESTP[p.estado]||p.estado)}</span>${p.comprobante?`<a class="b" href="${esc(p.comprobante)}" target="_blank" rel="noopener">Comprobante</a>`:''}<button class="b" data-a="editPed" data-id="${esc(id)}">Actualizar</button>${p.estado!=='preparacion'&&p.cid?`<button class="b w" data-a="msg" data-id="${esc(p.cid)}" data-m="pedido" data-v="${esc(id)}">Avisar al cliente</button>`:''}</div></div></div>`).join('')||`<div class="empty">${mcpG?'Todavía no hay pedidos. Cargá una venta con "+ Venta".':'Abrí la app desde Claude para ver los pedidos de tu hoja.'}</div>`}`;
@@ -945,7 +950,7 @@ document.body.addEventListener('click',async e=>{
   if(a==='okRapido')return guardarRapido();
   if(a==='msg'){st.vctx=b.dataset.v||'';return compose(id,b.dataset.m,b.dataset.p)}
   if(a==='ia')return escribirIA(b);
-  if(a==='addlink'){const t=$('m-t');const [n,u]=allLinks()[+b.dataset.i];t.value=t.value.trimEnd()+'\n'+n+': '+u;t.dispatchEvent(new Event('input'));return}
+  if(a==='addlink'){const t=$('m-t');const [n,u]=allLinks()[+b.dataset.i];t.value=t.value.trimEnd()+'\n'+fraseLink(n,u);t.dispatchEvent(new Event('input'));return}
   if(a==='addblk'){const t=$('m-t');t.value=t.value.trimEnd()+'\n'+BLOQUES[+b.dataset.i][1];t.dispatchEvent(new Event('input'));return}
   if(a==='nuevoLink')return formLink();
   if(a==='noLink'){$('m-nl').innerHTML='';return}
