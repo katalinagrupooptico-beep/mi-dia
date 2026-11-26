@@ -907,7 +907,7 @@ function editPed(id){
    <div id="p-drop" style="border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mut)">${GAS&&SUBIR_OK?`Arrastrá el archivo acá o <label class="b" style="display:inline-block;cursor:pointer">elegilo<input type="file" id="p-file" accept="application/pdf,image/*" hidden></label>`:'Subí el archivo a Drive y pegá el link abajo.'}</div>
    <div id="p-up" class="sub" style="margin-top:6px">${p.comprobante?`Ya tiene comprobante: <a href="${esc(p.comprobante)}" target="_blank" rel="noopener">ver</a>`:''}</div>
    <label>Link del comprobante</label><input id="p-cl" value="${esc(p.comprobante||'')}" placeholder="Se completa solo al adjuntar">
-   <div class="acts" style="margin-top:14px"><button class="b p" data-a="okPed" data-id="${esc(id)}">Guardar en la hoja</button><a class="b" href="${PURL}" target="_blank" rel="noopener">Abrir la hoja</a></div>`);
+   <div class="acts" style="margin-top:14px"><button class="b p" data-a="okPed" data-id="${esc(id)}">Guardar en la hoja</button><button class="b" style="color:var(--co);border-color:var(--co)" data-a="delPed" data-id="${esc(id)}">Borrar venta</button><a class="b" href="${PURL}" target="_blank" rel="noopener">Abrir la hoja</a></div>`);
   $('p-tp').onclick=e=>{const b=e.target.closest('[data-tp]');if(!b)return;$('p-tp').querySelectorAll('.b').forEach(y=>y.classList.toggle('on',y===b))};
   const dz=$('p-drop');if(GAS&&SUBIR_OK&&dz){const hi=o=>{dz.style.borderColor=o?'var(--az)':'var(--line)';dz.style.background=o?'var(--azs)':''};
     ['dragenter','dragover'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();hi(1)}));['dragleave','drop'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();hi(0)}));
@@ -923,6 +923,16 @@ async function subirComp(f,p){
     const nom=(p.n||'pedido').replace(/[^\w áéíóúñÁÉÍÓÚÑ.-]/g,'')+' - '+(p.id||'')+' - '+f.name;
     const url=await gasRun('subir',nom,f.type,b64);$('p-cl').value=url;up.innerHTML='✓ Adjuntado: <a href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(f.name)+'</a>. Tocá "Guardar en la hoja" para dejarlo cargado.';toast('Archivo subido')}
   catch(e){const m=String(e&&e.message||'');up.textContent=/desconocida/i.test(m)?'Falta activar la subida de archivos en el programa de Google. Mientras tanto subí el archivo a Drive y pegá el link abajo.':'No pude subir el archivo. Probá de nuevo.';toast('No pude subir el archivo')}
+}
+async function delPed(id,btn){
+  const p=pedidos[id];if(!p)return;if(btn.dataset.ok!=='1'){btn.dataset.ok='1';btn.textContent='Tocá de nuevo para borrar';return}
+  btn.disabled=true;btn.textContent='Borrando…';
+  try{const r=await gs('get_values',{spreadsheetId:PSSID,range:`PEDIDOS!A${p.fila}`});const v=String((((r||{}).values||[])[0]||[])[0]||'');
+    if(v!==String(p.id))throw {message:'La planilla cambió, actualizá y probá de nuevo'};
+    const c=p.cid?cli(p.cid):null;if(p.pzH&&c&&c.cod&&p.f)await sumarPiezas(c,p.f,-p.pzH);
+    await gs('update_spreadsheet',{spreadsheetId:PSSID,requests:[{deleteDimension:{range:{sheetId:0,dimension:'ROWS',startIndex:p.fila-1,endIndex:p.fila}}}]});
+    delete pedidos[id];if(pseg[id]){delete pseg[id];del('pseg/'+id)}close();render();toast('Venta borrada');cargarPedidos()}
+  catch(e){btn.disabled=false;btn.textContent='Borrar venta';toast(vErrTxt(e))}
 }
 async function okPed(id,btn){
   const p=pedidos[id];if(!mcpG)return toast(vErrTxt({code:'sin_conexion'}));
@@ -1479,6 +1489,7 @@ document.body.addEventListener('click',async e=>{
   if(a==='slCopy'){const t=itemsSL(st.slf).map(x=>`${x.t}${x.z?' ('+x.z+')':''}: ${x.d}`).join('\n');try{await navigator.clipboard.writeText(t);toast('Copiado')}catch(_){toast('No se pudo copiar')}return}
   if(a==='editPed')return editPed(id);
   if(a==='okPed')return okPed(id,b);
+  if(a==='delPed')return delPed(id,b);
   if(a==='informe')return informe();
   if(a==='infMes')return informe(b.dataset.v);
   if(a==='infCopy'){try{await navigator.clipboard.writeText($('inf-t').value);toast('Copiado')}catch(_){$('inf-t').select()}return}
