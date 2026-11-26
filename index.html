@@ -1129,8 +1129,21 @@ async function cuboPreview(){
    ${extra.length?`<div class="sec"><h3>En tu hoja pero no en el cubo</h3><span>${extra.length}</span></div><p class="sub" style="margin-top:0">Tienen piezas cargadas este mes y el cubo no las trae. Marcá las que quieras borrar.</p>${extra.map(x=>`<label class="sel" style="color:var(--ink);margin:6px 0"><input type="checkbox" data-cbx="${x.i}"> ${esc(x.n.replace(/\s*\[\d+\]\s*$/,''))} · ${x.v} piezas</label>`).join('')}`:''}
    ${noFact.length?`<div class="sec"><h3>Ventas cargadas que no están en el cubo</h3><span>${noFact.length}</span></div>${noFact.map(p=>`<div class="note">${esc(p.n)} · ${esc(fmt(p.f))}${p.pz?' · '+p.pz+' piezas':''} — siguen en camino</div>`).join('')}`:''}
    ${sin.length?`<p class="sub" style="color:var(--co)">${sin.length} cliente${sin.length===1?'':'s'} del cubo no está${sin.length===1?'':'n'} en tu hoja: cargalo${sin.length===1?'':'s'} a mano.</p>`:''}
+   <label class="sel" style="margin-top:14px;color:var(--ink)"><input type="checkbox" id="cb-v" checked> Sumar a Ventas como entregadas (las que no habías cargado se crean; las que sí, se marcan entregadas)</label>
    <div class="acts" style="margin-top:14px"><button class="b p" data-a="cuboOk">Pasar a OPERACIONES (${esc(new Date(st.cubo.mes+'-15T12:00:00').toLocaleDateString('es-AR',{month:'long'}))})</button></div>`;
 }
+async function cuboVentas(L){
+  const mes=st.cubo.mes,fin=new Date(Number(mes.slice(0,4)),Number(mes.slice(5,7)),0).toISOString().slice(0,10),f=fin<HOY?fin:HOY;
+  const r=await gs('get_values',{spreadsheetId:PSSID,range:'PEDIDOS!A1:R'});const V=(r&&r.values)||[];let prox=V.length+1,n=0;
+  const ids=V.map(x=>String((x||[])[0]||''));
+  for(const o of L){
+    const app=Object.values(pedidos).filter(p=>p.f&&p.f.slice(0,7)===mes&&!String(p.id).startsWith('C')&&(()=>{const c=p.cid?cli(p.cid):null;return (o.cod&&c&&String(c.cod)===o.cod)||norm2(p.n)===norm2(o.n.replace(/^[^(]*\((.*)\)\s*$/,'$1'))})());
+    if(app.length){for(const p of app){if(p.estado!=='entregado'){await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!F${p.fila}`,values:[['Entregado']]});n++}}continue}
+    for(const [t,q,m] of [['F',o.pf,o.mf],['X',o.px,o.mx]]){if(!q&&!m)continue;
+      const id='C'+mes.replace('-','')+'-'+(o.cod||norm2(o.n).slice(0,12))+'-'+t,i=ids.indexOf(id),fila=i>=0?i+1:prox++;
+      const cc=o.cod&&allCli().find(c=>String(c.cod)===o.cod),nom=(cc&&cc.n)||o.n.replace(/^[^(]*\((.*)\)\s*$/,'$1')||o.n;
+      await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!A${fila}:R${fila}`,values:[[id,fDate(f),nom,'Cargado desde el cubo',Math.round(m),'Entregado',fDate(f),t==='X'?'En 02':'Facturado',Math.round(m),'','','','','','Katalina',q,q,'']]});n++}}
+  return n}
 async function cuboOk(btn){
   const {L,tot}=st.cubo.data,{y,m,col}=st.cubo.H;btn.disabled=true;btn.textContent='Guardando…';
   try{const H=((await gs('get_values',{range:opTab(y)+'!'+col+'1:'+col+'600'}))||{}).values||[];const V=[];const n=Math.max(H.length,...L.map(o=>o.fila+1));
@@ -1139,7 +1152,9 @@ async function cuboOk(btn){
     document.querySelectorAll('[data-cbx]').forEach(c=>{if(c.checked)V[+c.dataset.cbx]=['']});
     await gs('update_values',{range:opTab(y)+'!'+col+'1:'+col+V.length,values:V});
     const doc={mes:st.cubo.mes,cargado:HOY,archivo:st.cubo.nombre||'',tot,cods:L.map(o=>o.cod).filter(Boolean),filas:L.map(o=>({cod:o.cod,n:o.n,pf:o.pf,px:o.px,mf:Math.round(o.mf),mx:Math.round(o.mx)}))};
-    difus['cubo-'+st.cubo.mes]=doc;await save('difusiones/cubo-'+st.cubo.mes,doc);pzhT=0;close();render();toast('Cubo cargado: '+tot.pz+' piezas en OPERACIONES')}
+    difus['cubo-'+st.cubo.mes]=doc;await save('difusiones/cubo-'+st.cubo.mes,doc);pzhT=0;
+    let nv=0;if($('cb-v')&&$('cb-v').checked){try{nv=await cuboVentas(L)}catch(e){toast('Las piezas quedaron, pero no pude pasar las ventas: '+vErrTxt(e))}}
+    close();render();cargarPedidos();toast('Cubo cargado: '+tot.pz+' piezas en OPERACIONES'+(nv?' · '+nv+' ventas actualizadas':''))}
   catch(e){btn.disabled=false;btn.textContent='Pasar a OPERACIONES';toast(vErrTxt(e))}
 }
 document.body.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;if(b.dataset.a==='cubo'){e.preventDefault();cubo()}if(b.dataset.a==='cuboOk')cuboOk(b)});
