@@ -1024,8 +1024,7 @@ function renderInicio(){
   else if(!quedan)frase=`Cerraste ${nombreMes} con ${pz} piezas.`;
   else if(proy>=prox)frase=`A este ritmo cerrás el mes con unas ${proy} piezas. Te faltan ${falta} para llegar a ${prox}.`;
   else frase=`Te faltan ${falta} piezas para llegar a ${prox}: son ${porDia} por día en los ${quedan} día${quedan===1?'':'s'} hábiles que quedan.`;
-  $('v-inicio').innerHTML=`<div class="go-logo" role="img" aria-label="Grupo Óptico"></div>
-   <div class="top" style="margin-top:6px"><div class="d"><h1 style="text-transform:none">${esc(hoyTxt.charAt(0).toUpperCase()+hoyTxt.slice(1))}</h1><small>Día hábil ${idx} de ${H.length} · ${quedan>0?'te quedan '+quedan+' (contando hoy)':'terminó el mes'}</small></div></div>
+  $('v-inicio').innerHTML=`   <div class="top" style="margin-top:6px"><div class="d"><h1 style="text-transform:none">${esc(hoyTxt.charAt(0).toUpperCase()+hoyTxt.slice(1))}</h1><small>Día hábil ${idx} de ${H.length} · ${quedan>0?'te quedan '+quedan+' (contando hoy)':'terminó el mes'}</small></div></div>
    ${recta?`<div class="note" style="margin-top:12px;border-color:var(--co)"><b>Recta final de ${esc(nombreMes)}</b>: ${quedan===1?'hoy es el último día hábil':'quedan '+quedan+' días hábiles'}. ${quedan<=3?'Es el momento de cerrar los pedidos pendientes y llamar a los que te dijeron "la semana que viene".':'Repasá a quién le toca reposición y cerrá lo que esté abierto.'}</div>`:''}
    <div class="card" style="padding:14px;margin-top:12px"><div class="tt" style="font-weight:600">Piezas de ${esc(nombreMes)}</div>
     <div style="font-size:40px;font-weight:700;line-height:1.1;margin-top:4px">${pz}<span style="font-size:16px;color:var(--mut);font-weight:500"> piezas${conf?' · '+conf+' confirmadas con factura':''}</span></div>
