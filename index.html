@@ -1068,12 +1068,13 @@ function renderInicio(){
    ${(vAplicar(),vAvisos())}
    ${recta?`<div class="note" style="margin-top:12px;border-color:var(--co)"><b>Recta final de ${esc(nombreMes)}</b>: ${quedan===1?'hoy es el último día hábil':'quedan '+quedan+' días hábiles'}. ${quedan<=3?'Es el momento de cerrar los pedidos pendientes y llamar a los que te dijeron "la semana que viene".':'Repasá a quién le toca reposición y cerrá lo que esté abierto.'}</div>`:''}
    <div class="card" style="padding:14px;margin-top:12px"><div class="tt" style="font-weight:600">Piezas de ${esc(nombreMes)}</div>
-    <div style="font-size:40px;font-weight:700;line-height:1.1;margin-top:4px">${pz}<span style="font-size:16px;color:var(--mut);font-weight:500"> facturadas${CB?' · '+CB.tot.pf+' facturado · '+CB.tot.px+' en 02':''}</span></div>${camino.pz?`<div class="sub">+ ${camino.pz} piezas en camino (${camino.n} venta${camino.n===1?'':'s'} cargada${camino.n===1?'':'s'} sin facturar)</div>`:''}<div class="sub">${CB?'Según el cubo cargado el '+esc(fmt(CB.cargado)):'Según tu hoja de OPERACIONES'} · <a href="#" data-a="cubo" onclick="event.preventDefault()">Cargar cubo</a></div>
+    <div style="font-size:40px;font-weight:700;line-height:1.1;margin-top:4px">${pz}<span style="font-size:16px;color:var(--mut);font-weight:500"> piezas</span></div>${CB?`<div class="sub" style="color:var(--ink)">${CB.tot.pf} facturado · ${CB.tot.px} en 02</div>`:''}${camino.pz?`<div class="sub">+ ${camino.pz} piezas en camino (${camino.n} venta${camino.n===1?'':'s'} cargada${camino.n===1?'':'s'} sin facturar)</div>`:''}<div class="sub">${CB?'Según el cubo cargado el '+esc(fmt(CB.cargado)):'Según tu hoja de OPERACIONES'} · <a href="#" data-a="cubo" onclick="event.preventDefault()">Cargar cubo</a></div>
     <div class="bar"><u style="width:${pct}%"></u>${METAS.map(x=>`<em style="left:${x/650*100}%"><small>${x}</small></em>`).join('')}</div>
     <div class="sub">${esc(frase)}</div>${flecha(pz,pzP)}</div>
    <div class="ini-k">
-    <div><b>${d.ventas}</b><span>ventas · ${esc(money(d.ventasM))}</span>${flecha(d.ventas,dp.ventas)}</div>
-    <div><b>${esc(money(fac))}</b><span>facturado</span><i>${esc(money(x02))} en 02</i></div>
+    <div style="grid-column:1/-1"><b>${esc(money(fac+x02))}</b><span>vendido en el mes${CB?' (según el cubo)':''} · ${d.ventas} venta${d.ventas===1?'':'s'} cargada${d.ventas===1?'':'s'}</span>${flecha(d.ventas,dp.ventas)}</div>
+    <div><b>${esc(money(fac))}</b><span>facturado</span>${CB?`<i>${CB.tot.pf} piezas</i>`:''}</div>
+    <div><b>${esc(money(x02))}</b><span>en 02</span>${CB?`<i>${CB.tot.px} piezas</i>`:''}</div>
     <div><b>${d.contactos}</b><span>contactos (${d.opticas} ópticas)</span>${flecha(d.contactos,dp.contactos)}</div>
     <div><b>${d.visitas}</b><span>visitas</span>${flecha(d.visitas,dp.visitas)}</div>
     <div><b>${esc(money(d.cobrado))}</b><span>cobrado</span>${flecha(d.cobrado,dp.cobrado,money)}</div>
