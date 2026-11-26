@@ -864,7 +864,7 @@ function renderPedidos(){
    <div class="acts" style="margin:0 0 10px"><button class="b" data-a="pedReload">Actualizar</button></div>
    ${pedErr?`<div class="note" style="border-color:var(--co)">${esc(vErrTxt({code:pedErr}))}</div>`:''}
    <p class="sub" style="margin-top:0">Tocá Actualizar en cada pedido para cargar estado, factura, faltantes, despacho y comprobante.</p>
-   ${L.map(([id,p])=>`<div class="it" data-pn="${esc(norm2(p.n))}"><div class="bd"><div class="tt">${esc(p.n)}</div><div class="sub">${esc(['Venta del '+fmt(p.f),p.monto?'vendido '+money(p.monto):'',p.fechaFact?'facturado '+fmt(p.fechaFact)+(p.tipoFact==='Remito'?' (en 02)':''):(p.f?'factura aprox. '+fmt(addD(p.f,7)):''),p.entregaEst?'llega aprox. '+fmt(p.entregaEst):''].filter(Boolean).join(' · '))}</div>${p.montoFact!=null&&Number(p.montoFact)!==Number(p.monto||0)?`<div class="sub" style="color:var(--co)">Monto final ${esc(money(p.montoFact))} (${esc(money(Number(p.montoFact)-Number(p.monto||0)))})${p.faltantes?' · faltaron: '+esc(p.faltantes):''}</div>`:p.faltantes?`<div class="sub" style="color:var(--co)">Faltaron: ${esc(p.faltantes)}</div>`:''}
+   ${L.map(([id,p])=>`<div class="it" data-pn="${esc(norm2(p.n))}"><div class="bd"><div class="tt">${esc(p.n)}</div><div class="sub">${esc([p.f?'Venta del '+fmt(p.f):(/^C\d{6}/.test(p.id)?'Ventas de '+new Date(p.id.slice(1,5)+'-'+p.id.slice(5,7)+'-15T12:00:00').toLocaleDateString('es-AR',{month:'long'})+' (cubo)':''),p.monto?'vendido '+money(p.monto):'',p.fechaFact?'facturado '+fmt(p.fechaFact)+(p.tipoFact==='Remito'?' (en 02)':''):(p.f?'factura aprox. '+fmt(addD(p.f,7)):''),p.entregaEst?'llega aprox. '+fmt(p.entregaEst):''].filter(Boolean).join(' · '))}</div>${p.montoFact!=null&&Number(p.montoFact)!==Number(p.monto||0)?`<div class="sub" style="color:var(--co)">Monto final ${esc(money(p.montoFact))} (${esc(money(Number(p.montoFact)-Number(p.monto||0)))})${p.faltantes?' · faltaron: '+esc(p.faltantes):''}</div>`:p.faltantes?`<div class="sub" style="color:var(--co)">Faltaron: ${esc(p.faltantes)}</div>`:''}
     ${p.detalle?`<div class="sub">${esc(p.detalle)}</div>`:''}${p.notaCliente?`<div class="note"><b>Para el cliente:</b> ${esc(p.notaCliente)}</div>`:''}
     <div class="acts"><span class="tag${p.estado==='preparacion'?' c':''}">${esc(ESTP[p.estado]||p.estado)}</span>${p.comprobante?`<a class="b" href="${esc(p.comprobante)}" target="_blank" rel="noopener">Comprobante</a>`:''}<button class="b" data-a="editPed" data-id="${esc(id)}">Actualizar</button>${p.estado!=='preparacion'&&p.cid?`<button class="b w" data-a="msg" data-id="${esc(p.cid)}" data-m="pedido" data-v="${esc(id)}">Avisar al cliente</button>`:''}</div></div></div>`).join('')||`<div class="empty">${mcpG?'Todavía no hay pedidos. Cargá una venta con "+ Venta".':'Abrí la app desde Claude para ver los pedidos de tu hoja.'}</div>`}`;
   filtrarPed();
@@ -1099,10 +1099,11 @@ async function leerXlsx(buf){
 function leerCsv(t){return t.split(/\r?\n/).filter(Boolean).map(l=>{const sep=l.includes(';')?';':',';const out=[];let cur='',q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===sep&&!q){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out.map(x=>{const y=x.trim();const n=Number(y.replace(/\./g,'').replace(',','.'));return y!==''&&/^-?[\d.,]+$/.test(y)&&!isNaN(n)?n:y})})}
 function parseCubo(rows){
   const h=(rows[0]||[]).map(x=>norm2(x)),ix=k=>h.findIndex(x=>x.includes(k));
-  const iC=ix('cliente'),iT=ix('tipo'),iQ=ix('cantidad'),iS=ix('s/iva');if(iC<0||iT<0||iQ<0)throw new Error('No reconozco el formato: faltan las columnas Cliente, Tipo Cpte o Total Cantidad.');
+  const iC=ix('cliente'),iT=ix('tipo'),iQ=ix('cantidad'),iS=ix('s/iva'),iF=ix('fecha');if(iC<0||iT<0||iQ<0)throw new Error('No reconozco el formato: faltan las columnas Cliente, Tipo Cpte o Total Cantidad.');
   const M={};rows.slice(1).forEach(r=>{const cl=String(r[iC]||'').trim();if(!cl)return;const tp=String(r[iT]||''),x=/\bx$/i.test(tp.trim())||/presupuesto/i.test(tp);
     const cod=(cl.match(/\[(\d+)\]\s*$/)||[])[1]||'',k=cod||norm2(cl);const o=M[k]=M[k]||{cod,n:cl.replace(/\s*\[\d+\]\s*$/,''),pf:0,px:0,mf:0,mx:0};
-    const q=Number(r[iQ])||0,m=Number(r[iS])||0;if(x){o.px+=q;o.mx+=m}else{o.pf+=q;o.mf+=m}});
+    const q=Number(r[iQ])||0,m=Number(r[iS])||0;if(x){o.px+=q;o.mx+=m}else{o.pf+=q;o.mf+=m}
+    const fe=iF>=0?fechaCubo(r[iF]):'';if(fe){o.det=o.det||{};const g=o.det[fe+(x?'X':'F')]=o.det[fe+(x?'X':'F')]||{f:fe,t:x?'X':'F',q:0,m:0};g.q+=q;g.m+=m}});
   const L=Object.values(M);const tot=L.reduce((t,o)=>({pf:t.pf+o.pf,px:t.px+o.px,mf:t.mf+o.mf,mx:t.mx+o.mx}),{pf:0,px:0,mf:0,mx:0});tot.pz=tot.pf+tot.px;return {L,tot}}
 function enCamino(){const L=Object.values(pedidos).filter(p=>p.f&&!String(p.id).startsWith('C')&&!p.fechaFact&&!['facturado','despachado','entregado'].includes(p.estado)&&diasEntre(p.f,HOY)<=60);
   return {n:L.length,pz:L.reduce((t,p)=>t+pzDe(p),0)}}
@@ -1142,20 +1143,23 @@ async function cuboPreview(){
    <label class="sel" style="margin-top:14px;color:var(--ink)"><input type="checkbox" id="cb-v" checked> Sumar a Ventas como entregadas (lo del cubo que no esté en tus ventas ya facturadas se carga como "según cubo")</label>
    <div class="acts" style="margin-top:14px"><button class="b p" data-a="cuboOk">Pasar a OPERACIONES (${esc(new Date(st.cubo.mes+'-15T12:00:00').toLocaleDateString('es-AR',{month:'long'}))})</button></div>`;
 }
+function fechaCubo(v){if(typeof v==='number'&&v>20000)return new Date(Math.round((v-25569)*864e5)).toISOString().slice(0,10);return pFecha(v)}
 async function cuboVentas(L){
-  const mes=st.cubo.mes,fin=new Date(Number(mes.slice(0,4)),Number(mes.slice(5,7)),0).toISOString().slice(0,10),f=fin<HOY?fin:HOY;
-  const r=await gs('get_values',{spreadsheetId:PSSID,range:'PEDIDOS!A1:R'});const V=(r&&r.values)||[];let prox=V.length+1,n=0;const borrar=[];
+  const mes=st.cubo.mes,pre='C'+mes.replace('-','');
+  const r=await gs('get_values',{spreadsheetId:PSSID,range:'PEDIDOS!A1:R'});const V=(r&&r.values)||[];let prox=V.length+1,n=0;const usados=new Set();
   const ids=V.map(x=>String((x||[])[0]||''));
   const mismo=(p,o)=>{const c=p.cid?cli(p.cid):null;return (o.cod&&c&&String(c.cod)===o.cod)||norm2(p.n)===norm2(o.n.replace(/^[^(]*\((.*)\)\s*$/,'$1'))};
   for(const o of L){
     const app=Object.values(pedidos).filter(p=>!String(p.id).startsWith('C')&&['facturado','despachado','entregado'].includes(p.estado)&&((p.fechaFact||p.f||'').slice(0,7)===mes)&&mismo(p,o));
-    for(const [t,q,m] of [['F',o.pf,o.mf],['X',o.px,o.mx]]){
-      const ya=app.filter(p=>(p.tipoFact==='Remito'?'X':'F')===t),yq=ya.reduce((s,p)=>s+pzDe(p),0),ym=ya.reduce((s,p)=>s+montoFinal(p),0);
-      const rq=q-yq,rm=Math.round(m-ym),id='C'+mes.replace('-','')+'-'+(o.cod||norm2(o.n).slice(0,12))+'-'+t,i=ids.indexOf(id);
-      if(rq<=0&&rm<=0){if(i>=0)borrar.push(i);continue}
-      const fila=i>=0?i+1:prox++,cc=o.cod&&allCli().find(c=>String(c.cod)===o.cod),nom=(cc&&cc.n)||o.n.replace(/^[^(]*\((.*)\)\s*$/,'$1')||o.n;
-      await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!A${fila}:R${fila}`,values:[[id,fDate(f),nom,ya.length?'Otras ventas del mes (según cubo)':'Cargado desde el cubo',rm,'Entregado',fDate(f),t==='X'?'En 02':'Facturado',rm,'','','','','','Katalina',rq,rq,'']]});n++}}
-  for(const i of borrar.sort((a,b)=>b-a))await gs('update_spreadsheet',{spreadsheetId:PSSID,requests:[{deleteDimension:{range:{sheetId:0,dimension:'ROWS',startIndex:i,endIndex:i+1}}}]});
+    const grupos=o.det?Object.values(o.det):[['F',o.pf,o.mf],['X',o.px,o.mx]].map(([t,q,m])=>({f:'',t,q,m}));
+    const cc=o.cod&&allCli().find(c=>String(c.cod)===o.cod),nom=(cc&&cc.n)||o.n.replace(/^[^(]*\((.*)\)\s*$/,'$1')||o.n;
+    for(const g of grupos){
+      const ya=app.filter(p=>(p.tipoFact==='Remito'?'X':'F')===g.t&&(!g.f||(p.fechaFact||p.f)===g.f)),yq=ya.reduce((s,p)=>s+pzDe(p),0),ym=ya.reduce((s,p)=>s+montoFinal(p),0);
+      const rq=g.q-yq,rm=Math.round(g.m-ym);if(rq<=0&&rm<=0)continue;
+      const id=pre+'-'+(o.cod||norm2(o.n).slice(0,12))+'-'+g.t+(g.f?'-'+g.f.slice(8,10):''),i=ids.indexOf(id),fila=i>=0?i+1:prox++;usados.add(id);
+      await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!A${fila}:R${fila}`,values:[[id,g.f?fDate(g.f):'',nom,ya.length?'Otras ventas (según cubo)':(g.f?'Según cubo':'Ventas de '+new Date(mes+'-15T12:00:00').toLocaleDateString('es-AR',{month:'long'})+' (según cubo)'),rm,'Entregado',g.f?fDate(g.f):'',g.t==='X'?'En 02':'Facturado',rm,'','','','','','Katalina',rq,rq,'']]});n++}}
+  const viejos=ids.map((x,i)=>[x,i]).filter(([x])=>x.startsWith(pre+'-')&&!usados.has(x)).map(([,i])=>i).sort((a,b)=>b-a);
+  for(const i of viejos)await gs('update_spreadsheet',{spreadsheetId:PSSID,requests:[{deleteDimension:{range:{sheetId:0,dimension:'ROWS',startIndex:i,endIndex:i+1}}}]});
   return n}
 async function cuboOk(btn){
   const {L,tot}=st.cubo.data,{y,m,col}=st.cubo.H;btn.disabled=true;btn.textContent='Guardando…';
