@@ -879,7 +879,7 @@ async function okVenta(btn){
   const c=cli(cid),f=$('v-f').value||HOY,det=$('v-d').value.trim(),m=Number(String($('v-m').value).replace(/\D/g,''))||0,pz=Number(String($('v-p').value).replace(/\D/g,''))||0;
   const id='V'+f.replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
   btn.disabled=true;btn.textContent='Guardando…';
-  try{const col=await gs('get_values',{spreadsheetId:PSSID,range:'PEDIDOS!C:C'});const fila=Math.max(2,((col&&col.values)||[]).length+1);await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!A${fila}:O${fila}`,values:[[id,fDate(f),c.n,det,m||'','En preparación','','','','','','','','','Katalina',pz||'','','']]});
+  try{const col=await gs('get_values',{spreadsheetId:PSSID,range:'PEDIDOS!C:C'});const fila=Math.max(2,((col&&col.values)||[]).length+1);await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!A${fila}:R${fila}`,values:[[id,fDate(f),c.n,det,m||'','En preparación','','','','','','','','','Katalina',pz||'','','']]});
     if(pz){const ok=await sumarPiezas(c,f,pz);if(ok)await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!R${fila}`,values:[[pz]]})}}
   catch(e){btn.disabled=false;btn.textContent='Guardar en PEDIDOS';return toast(vErrTxt(e))}
   pseg[id]={cid,seg:{}};save('pseg/'+id,pseg[id]);close();
