@@ -674,7 +674,7 @@ const CONCEPTOS=['Combustible','Almuerzo','Desayuno','Café ruta','Cena','Peaje'
 const vGastado=v=>(v.gastos||[]).reduce((s,g)=>s+(g.favor?-1:1)*Math.abs(Number(g.m)||0),0);
 const vResto=v=>(Number(v.monto)||0)-vGastado(v);
 async function gs(tool,input){if(!mcpG)throw {code:'sin_conexion'};const r=await mcpG.callTool(GS,tool,Object.assign({spreadsheetId:SSID},input));return r.payload}
-function vErrTxt(e){const c=e&&e.code;return c==='sin_conexion'?'Abrí la app desde Claude para que escriba en la hoja.':c==='needs_reauth'?'Reconectá Google Sheets en Configuración → Conectores.':c==='server_not_connected'?'Conectá Google Sheets en Configuración → Conectores.':c==='approval_required'||c==='not_in_manifest'?'Falta que permitas a la app usar Google Sheets.':'No se pudo escribir en la hoja ('+(c||'error')+').'}
+function vErrTxt(e){const c=e&&e.code;return c==='sin_conexion'?'Abrí la app desde Claude para que escriba en la hoja.':c==='needs_reauth'?'Reconectá Google Sheets en Configuración → Conectores.':c==='server_not_connected'?'Conectá Google Sheets en Configuración → Conectores.':c==='approval_required'||c==='not_in_manifest'?'Falta que permitas a la app usar Google Sheets.':c==='clave'?'La clave cambió: cerrá la app, abrila y poné la clave nueva.':'No se pudo escribir en la hoja'+(e&&e.message?': '+String(e.message).slice(0,140):' ('+(c||'error')+')')+'.'}
 async function syncViat(id){
   if(vSync[id])return;vSync[id]=true;let v=Object.assign({},viat[id]);
   try{
