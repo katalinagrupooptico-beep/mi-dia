@@ -884,7 +884,7 @@ async function okVenta(btn){
   const id='V'+f.replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
   btn.disabled=true;btn.textContent='Guardando…';
   try{const col=await gs('get_values',{spreadsheetId:PSSID,range:'PEDIDOS!C:C'});const fila=Math.max(2,((col&&col.values)||[]).length+1);await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!A${fila}:R${fila}`,values:[[id,fDate(f),c.n,det,m||'','En preparación','','','','','','','','','Katalina',pz||'','','']]});
-    if(pz){const ok=await sumarPiezas(c,f,pz);if(ok)await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!R${fila}`,values:[[pz]]})}}
+    }
   catch(e){btn.disabled=false;btn.textContent='Guardar en PEDIDOS';return toast(vErrTxt(e))}
   pseg[id]={cid,seg:{}};save('pseg/'+id,pseg[id]);close();
   saveCli(cid,{notas:(c.notas||[]).concat([{f,t:'Venta: '+(det||'pedido')}]),ultimo:HOY});marcarHoja(c,'Venta: '+(det||'pedido'));
@@ -934,7 +934,6 @@ async function okPed(id,btn){
   try{await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!F${p.fila}:N${p.fila}`,values:[row]});
     await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!Q${p.fila}`,values:[[pzF===''?'':Number(pzF)]]});
     const obj=pzF!==''?Number(pzF):(p.pz||0),d=obj-(p.pzH||0),c=p.cid?cli(p.cid):null;
-    if(d&&c&&c.cod&&p.f){const ok=await sumarPiezas(c,p.f,d);if(ok)await gs('update_values',{spreadsheetId:PSSID,range:`PEDIDOS!R${p.fila}`,values:[[obj]]})}
   }catch(e){btn.disabled=false;btn.textContent='Guardar en la hoja';return toast(vErrTxt(e))}
   close();toast('Pedido actualizado en la hoja');cargarPedidos();
 }
@@ -1040,8 +1039,9 @@ function renderInicio(){
   const mes=HOY.slice(0,7),[Y,M]=mes.split('-').map(Number),pm=new Date(Y,M-2,15),mesP=pm.getFullYear()+'-'+String(pm.getMonth()+1).padStart(2,'0');
   const d=datosInforme(mes),dp=datosInforme(mesP),H=habiles(mes),idx=H.filter(x=>x<=HOY).length,quedan=H.filter(x=>x>=HOY).length;
   const enM=(p,mm)=>p.f&&p.f.slice(0,7)===mm,P=Object.values(pedidos).filter(p=>enM(p,mes)),PP=Object.values(pedidos).filter(p=>enM(p,mesP));
-  cargarPzHoja();const pzApp=P.reduce((t,p)=>t+pzDe(p),0),pz=Math.max(pzApp,PZH[mes]||0),pzP=Math.max(PP.reduce((t,p)=>t+pzDe(p),0),PZH[mesP]||0),conf=P.filter(p=>p.pzF!=null).reduce((t,p)=>t+Number(p.pzF),0);
-  const fac=P.filter(p=>p.tipoFact==='Factura').reduce((t,p)=>t+montoFinal(p),0),x02=P.filter(p=>p.tipoFact==='Remito').reduce((t,p)=>t+montoFinal(p),0);
+  cargarPzHoja();const CB=difus['cubo-'+mes],CBP=difus['cubo-'+mesP];
+  const pz=CB?CB.tot.pz:(PZH[mes]||0),pzP=CBP?CBP.tot.pz:(PZH[mesP]||0),camino=enCamino(),conf=0;
+  const fac=CB?CB.tot.mf:P.filter(p=>p.tipoFact==='Factura').reduce((t,p)=>t+montoFinal(p),0),x02=CB?CB.tot.mx:P.filter(p=>p.tipoFact==='Remito').reduce((t,p)=>t+montoFinal(p),0);
   const prox=METAS.find(x=>x>pz),falta=prox?prox-pz:0,porDia=prox?Math.ceil(falta/Math.max(1,quedan)):0,proy=idx?Math.round(pz/idx*H.length):0;
   const pct=Math.min(100,pz/650*100);
   const nombreMes=new Date(Y,M-1,15).toLocaleDateString('es-AR',{month:'long'});
@@ -1058,7 +1058,7 @@ function renderInicio(){
    ${(vAplicar(),vAvisos())}
    ${recta?`<div class="note" style="margin-top:12px;border-color:var(--co)"><b>Recta final de ${esc(nombreMes)}</b>: ${quedan===1?'hoy es el último día hábil':'quedan '+quedan+' días hábiles'}. ${quedan<=3?'Es el momento de cerrar los pedidos pendientes y llamar a los que te dijeron "la semana que viene".':'Repasá a quién le toca reposición y cerrá lo que esté abierto.'}</div>`:''}
    <div class="card" style="padding:14px;margin-top:12px"><div class="tt" style="font-weight:600">Piezas de ${esc(nombreMes)}</div>
-    <div style="font-size:40px;font-weight:700;line-height:1.1;margin-top:4px">${pz}<span style="font-size:16px;color:var(--mut);font-weight:500"> piezas${conf?' · '+conf+' confirmadas con factura':''}</span></div>
+    <div style="font-size:40px;font-weight:700;line-height:1.1;margin-top:4px">${pz}<span style="font-size:16px;color:var(--mut);font-weight:500"> facturadas${CB?' · '+CB.tot.pf+' facturado · '+CB.tot.px+' en 02':''}</span></div>${camino.pz?`<div class="sub">+ ${camino.pz} piezas en camino (${camino.n} venta${camino.n===1?'':'s'} cargada${camino.n===1?'':'s'} sin facturar)</div>`:''}<div class="sub">${CB?'Según el cubo cargado el '+esc(fmt(CB.cargado)):'Según tu hoja de OPERACIONES'} · <a href="#" data-a="cubo" onclick="event.preventDefault()">Cargar cubo</a></div>
     <div class="bar"><u style="width:${pct}%"></u>${METAS.map(x=>`<em style="left:${x/650*100}%"><small>${x}</small></em>`).join('')}</div>
     <div class="sub">${esc(frase)}</div>${flecha(pz,pzP)}</div>
    <div class="ini-k">
@@ -1069,9 +1069,80 @@ function renderInicio(){
     <div><b>${esc(money(d.cobrado))}</b><span>cobrado</span>${flecha(d.cobrado,dp.cobrado,money)}</div>
     <div><b>${esc(money(d.pend))}</b><span>por cobrar</span><i>${esc(money(d.pendF))} facturado</i></div>
    </div>
-   <div class="acts"><a class="b p" href="#hoy">Ver lo de hoy</a><button class="b" data-a="informe">Informe del mes</button></div>
-   <p class="sub">Las piezas salen de tu hoja de OPERACIONES y de las ventas que cargás (cuando se confirma la factura, cuenta lo facturado). Facturado y en 02 se completan cuando se carga la factura del pedido.</p>`;
+   <div class="acts"><a class="b p" href="#hoy">Ver lo de hoy</a><button class="b" data-a="cubo">Cargar cubo de ventas</button><button class="b" data-a="informe">Informe del mes</button></div>
+   <p class="sub">Las piezas facturadas salen del cubo de ventas (o de tu hoja de OPERACIONES). Las ventas que cargás quedan en camino hasta que aparecen en el cubo.</p>`;
 }
+
+async function leerXlsx(buf){
+  const u=new Uint8Array(buf),dv=new DataView(buf);let e=u.length-22;while(e>0&&dv.getUint32(e,true)!==0x06054b50)e--;
+  const n=dv.getUint16(e+10,true);let o=dv.getUint32(e+16,true);const F={};
+  for(let i=0;i<n;i++){const cm=dv.getUint16(o+10,true),cs=dv.getUint32(o+20,true),nl=dv.getUint16(o+28,true),xl=dv.getUint16(o+30,true),cl=dv.getUint16(o+32,true),lo=dv.getUint32(o+42,true);
+    const name=new TextDecoder().decode(u.slice(o+46,o+46+nl));F[name]={cm,cs,lo};o+=46+nl+xl+cl}
+  const get=async nm=>{const f=F[nm];if(!f)return '';const ln=dv.getUint16(f.lo+26,true),lx=dv.getUint16(f.lo+28,true),st=f.lo+30+ln+lx,data=u.slice(st,st+f.cs);
+    if(f.cm===0)return new TextDecoder().decode(data);const ds=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));return await new Response(ds).text()};
+  const P=x=>new DOMParser().parseFromString(x,'application/xml');
+  const ss=[...P(await get('xl/sharedStrings.xml')||'<a/>').getElementsByTagName('si')].map(si=>[...si.getElementsByTagName('t')].map(t=>t.textContent).join(''));
+  const sh=Object.keys(F).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort()[0];const D=P(await get(sh));
+  const col=r=>{let c=0;for(const ch of r.replace(/\d+/g,''))c=c*26+ch.charCodeAt(0)-64;return c-1};
+  return [...D.getElementsByTagName('row')].map(row=>{const a=[];[...row.getElementsByTagName('c')].forEach(c=>{const v=c.getElementsByTagName('v')[0],is=c.getElementsByTagName('t')[0],t=c.getAttribute('t');let x=v?v.textContent:(is?is.textContent:'');if(t==='s')x=ss[+x]||'';else if(t!=='str'&&t!=='inlineStr'&&x!==''&&!isNaN(+x))x=+x;a[col(c.getAttribute('r'))]=x});return a})}
+function leerCsv(t){return t.split(/\r?\n/).filter(Boolean).map(l=>{const sep=l.includes(';')?';':',';const out=[];let cur='',q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===sep&&!q){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out.map(x=>{const y=x.trim();const n=Number(y.replace(/\./g,'').replace(',','.'));return y!==''&&/^-?[\d.,]+$/.test(y)&&!isNaN(n)?n:y})})}
+function parseCubo(rows){
+  const h=(rows[0]||[]).map(x=>norm2(x)),ix=k=>h.findIndex(x=>x.includes(k));
+  const iC=ix('cliente'),iT=ix('tipo'),iQ=ix('cantidad'),iS=ix('s/iva');if(iC<0||iT<0||iQ<0)throw new Error('No reconozco el formato: faltan las columnas Cliente, Tipo Cpte o Total Cantidad.');
+  const M={};rows.slice(1).forEach(r=>{const cl=String(r[iC]||'').trim();if(!cl)return;const tp=String(r[iT]||''),x=/\bx$/i.test(tp.trim())||/presupuesto/i.test(tp);
+    const cod=(cl.match(/\[(\d+)\]\s*$/)||[])[1]||'',k=cod||norm2(cl);const o=M[k]=M[k]||{cod,n:cl.replace(/\s*\[\d+\]\s*$/,''),pf:0,px:0,mf:0,mx:0};
+    const q=Number(r[iQ])||0,m=Number(r[iS])||0;if(x){o.px+=q;o.mx+=m}else{o.pf+=q;o.mf+=m}});
+  const L=Object.values(M);const tot=L.reduce((t,o)=>({pf:t.pf+o.pf,px:t.px+o.px,mf:t.mf+o.mf,mx:t.mx+o.mx}),{pf:0,px:0,mf:0,mx:0});tot.pz=tot.pf+tot.px;return {L,tot}}
+function enCamino(){const L=Object.values(pedidos).filter(p=>{if(!p.f)return false;const m=p.f.slice(0,7),CB=difus['cubo-'+m],c=p.cid?cli(p.cid):null;
+    if(CB&&c&&c.cod&&CB.cods&&CB.cods.includes(String(c.cod)))return false;return !p.fechaFact&&diasEntre(p.f,HOY)<=45});
+  return {n:L.length,pz:L.reduce((t,p)=>t+pzDe(p),0)}}
+function cubo(){
+  const d=Number(HOY.slice(8)),def=d<=5?(()=>{const x=new Date(HOY+'T12:00:00');x.setMonth(x.getMonth()-1);return x.toISOString().slice(0,7)})():HOY.slice(0,7);
+  const ms=[];for(let i=0;i<4;i++){const x=new Date(HOY.slice(0,7)+'-15T12:00:00');x.setMonth(x.getMonth()-i);ms.push(x.toISOString().slice(0,7))}
+  st.cubo={mes:def,data:null};
+  open(`<div class="hd"><h2>Cargar cubo de ventas</h2><button class="x" data-a="close">×</button></div>
+   <p class="sub">Descargá el cubo del sistema (Excel) y elegilo acá. Separa solo lo facturado y lo en 02, y pone las piezas en tu hoja de OPERACIONES.</p>
+   <label>De qué mes es</label><select id="cb-m">${ms.map(m=>`<option value="${m}"${m===def?' selected':''}>${esc(new Date(m+'-15T12:00:00').toLocaleDateString('es-AR',{month:'long',year:'numeric'}))}</option>`).join('')}</select>
+   <label>Archivo del cubo</label><div style="border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mut)" id="cb-drop">Arrastralo acá o <label class="b" style="display:inline-block;cursor:pointer">elegilo<input type="file" id="cb-f" accept=".xlsx,.csv" hidden></label></div>
+   <div id="cb-res"></div>`);
+  $('cb-m').onchange=e=>{st.cubo.mes=e.target.value;if(st.cubo.data)cuboPreview()};
+  const go=f=>{if(f)cuboLeer(f)};$('cb-f').onchange=e=>go(e.target.files[0]);
+  const dz=$('cb-drop');['dragenter','dragover'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.style.borderColor='var(--az)'}));dz.addEventListener('dragleave',()=>dz.style.borderColor='var(--line)');dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='var(--line)';go(e.dataTransfer.files[0])});
+}
+async function cuboLeer(f){
+  const r=$('cb-res');r.innerHTML='<p class="sub">Leyendo '+esc(f.name)+'…</p>';
+  try{const rows=/\.csv$/i.test(f.name)?leerCsv(await f.text()):await leerXlsx(await f.arrayBuffer());st.cubo.data=parseCubo(rows);st.cubo.nombre=f.name;await cuboPreview()}
+  catch(e){r.innerHTML='<div class="note" style="border-color:var(--co)">'+esc(String(e&&e.message||e))+'</div>'}
+}
+async function cuboPreview(){
+  const r=$('cb-res'),{L,tot}=st.cubo.data,[y,m]=st.cubo.mes.split('-').map(Number),col='GHIJKLMNOPQR'[m-1];
+  r.innerHTML='<p class="sub">Cruzando con tu hoja…</p>';
+  let H=[];try{H=((await gs('get_values',{range:opTab(y)+'!B1:R600'}))||{}).values||[]}catch(e){r.innerHTML='<div class="note">No pude leer la pestaña '+y+' de OPERACIONES.</div>';return}
+  const fila=o=>{let i=o.cod?H.findIndex(x=>x&&new RegExp('\\['+o.cod+'\\]').test(String(x[0]||''))):-1;if(i<0){const k=norm2(o.n);i=H.findIndex(x=>x&&x[0]&&norm2(String(x[0]).replace(/\s*\[.*$/,''))===k)}return i};
+  L.forEach(o=>{o.fila=fila(o);o.prev=o.fila>=0?Number((H[o.fila]||[])[4+m]||0)||0:0});
+  const filas=new Set(L.map(o=>o.fila)),extra=H.map((x,i)=>({i,n:String((x||[])[0]||''),v:Number((x||[])[4+m]||0)||0})).filter(x=>x.v>0&&/\[\d+\]|\(/.test(x.n)&&!filas.has(x.i));
+  st.cubo.H={y,m,col,extra};const sin=L.filter(o=>o.fila<0);
+  const P=Object.values(pedidos).filter(p=>p.f&&p.f.slice(0,7)===st.cubo.mes),cods=new Set(L.map(o=>o.cod).filter(Boolean)),noFact=P.filter(p=>{const c=p.cid?cli(p.cid):null;return !(c&&c.cod&&cods.has(String(c.cod)))});
+  r.innerHTML=`<div class="kpi" style="margin-top:16px"><div><b>${tot.pz}</b><span>piezas</span></div><div><b>${tot.pf}</b><span>facturado · ${esc(money(tot.mf))}</span></div><div><b>${tot.px}</b><span>en 02 · ${esc(money(tot.mx))}</span></div></div>
+   <div class="sec"><h3>Por cliente</h3><span>${L.length}</span></div>
+   ${L.sort((a,b)=>(b.pf+b.px)-(a.pf+a.px)).map(o=>`<div class="note"><b style="color:var(--ink)">${esc(o.n)}</b> · ${o.pf+o.px} piezas${o.px&&o.pf?` (${o.pf} fact. + ${o.px} en 02)`:o.px?' en 02':''}${o.fila<0?' · <span style="color:var(--co)">no está en tu hoja</span>':o.prev!==o.pf+o.px?` · en la hoja: ${o.prev||'vacío'} → ${o.pf+o.px}`:' · ya estaba igual'}</div>`).join('')}
+   ${extra.length?`<div class="sec"><h3>En tu hoja pero no en el cubo</h3><span>${extra.length}</span></div><p class="sub" style="margin-top:0">Tienen piezas cargadas este mes y el cubo no las trae. Marcá las que quieras borrar.</p>${extra.map(x=>`<label class="sel" style="color:var(--ink);margin:6px 0"><input type="checkbox" data-cbx="${x.i}"> ${esc(x.n.replace(/\s*\[\d+\]\s*$/,''))} · ${x.v} piezas</label>`).join('')}`:''}
+   ${noFact.length?`<div class="sec"><h3>Ventas cargadas que no están en el cubo</h3><span>${noFact.length}</span></div>${noFact.map(p=>`<div class="note">${esc(p.n)} · ${esc(fmt(p.f))}${p.pz?' · '+p.pz+' piezas':''} — siguen en camino</div>`).join('')}`:''}
+   ${sin.length?`<p class="sub" style="color:var(--co)">${sin.length} cliente${sin.length===1?'':'s'} del cubo no está${sin.length===1?'':'n'} en tu hoja: cargalo${sin.length===1?'':'s'} a mano.</p>`:''}
+   <div class="acts" style="margin-top:14px"><button class="b p" data-a="cuboOk">Pasar a OPERACIONES (${esc(new Date(st.cubo.mes+'-15T12:00:00').toLocaleDateString('es-AR',{month:'long'}))})</button></div>`;
+}
+async function cuboOk(btn){
+  const {L,tot}=st.cubo.data,{y,m,col}=st.cubo.H;btn.disabled=true;btn.textContent='Guardando…';
+  try{const H=((await gs('get_values',{range:opTab(y)+'!'+col+'1:'+col+'600'}))||{}).values||[];const V=[];const n=Math.max(H.length,...L.map(o=>o.fila+1));
+    for(let i=0;i<n;i++){const x=(H[i]||[])[0]??'';V.push([x!==''&&!isNaN(Number(x))?Number(x):x])}
+    L.forEach(o=>{if(o.fila>=0){const v=o.pf+o.px;V[o.fila]=[v>0?v:'']}});
+    document.querySelectorAll('[data-cbx]').forEach(c=>{if(c.checked)V[+c.dataset.cbx]=['']});
+    await gs('update_values',{range:opTab(y)+'!'+col+'1:'+col+V.length,values:V});
+    const doc={mes:st.cubo.mes,cargado:HOY,archivo:st.cubo.nombre||'',tot,cods:L.map(o=>o.cod).filter(Boolean),filas:L.map(o=>({cod:o.cod,n:o.n,pf:o.pf,px:o.px,mf:Math.round(o.mf),mx:Math.round(o.mx)}))};
+    difus['cubo-'+st.cubo.mes]=doc;await save('difusiones/cubo-'+st.cubo.mes,doc);pzhT=0;close();render();toast('Cubo cargado: '+tot.pz+' piezas en OPERACIONES')}
+  catch(e){btn.disabled=false;btn.textContent='Pasar a OPERACIONES';toast(vErrTxt(e))}
+}
+document.body.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;if(b.dataset.a==='cubo'){e.preventDefault();cubo()}if(b.dataset.a==='cuboOk')cuboOk(b)});
 async function marcarHoja(c,nota,mot){
   if(!c||!c.cod||!mcpG)return;
   try{
