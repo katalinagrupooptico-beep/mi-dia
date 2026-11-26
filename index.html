@@ -115,7 +115,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(
 const TZ='America/Argentina/Cordoba';
 const iso=d=>d.toLocaleDateString('en-CA',{timeZone:TZ});
 const HOY=iso(new Date());
-const addD=(s,n)=>{const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
+const addD=(s,n)=>{const d=new Date(s+'T12:00:00');if(isNaN(d))return '';d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
 const fmt=s=>s?new Date(s+'T12:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'}):'';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'$'+Number(n||0).toLocaleString('es-AR');
@@ -202,12 +202,12 @@ function itemsHoy(){
     if(p.estado==='pendiente'&&!p.noReclamar&&p.vence&&p.vence<=HOY)L.push({k:'p',id,tipo:'cobro',t:p.n||cli(p.cid).n,det:(p.monto?money(p.monto)+' · ':'')+(p.tipo?TIPOL(p.tipo)+' · ':'')+(ultG(p)||p.nota||'Saldo pendiente'),f:p.vence||HOY,cid:p.cid});
   }
   for(const [id,p] of Object.entries(pedidos)){
-    const sg=p.seg||{};
+    const sg=p.seg||{};if(String(id).startsWith('C')||!p.f)continue;
     if(!p.fechaFact&&p.estado==='preparacion'&&addD(p.f,8)<=HOY&&!sg.fact)L.push({k:'v',id:id+':fact',tipo:'otro',t:p.n,det:'Venta del '+fmt(p.f)+' sin facturar: consultá con administración',f:addD(p.f,8),cid:p.cid,pid:id});
     if((p.faltantes||(p.montoFact!=null&&p.montoFact!==''&&Number(p.montoFact)!==Number(p.monto||0)))&&!sg.falt)L.push({k:'v',id:id+':falt',tipo:'seg',t:p.n,det:'Cambió el pedido'+(p.faltantes?' (faltaron '+p.faltantes+')':'')+': avisale el monto final '+money(montoFinal(p)),f:p.fechaFact||HOY,cid:p.cid,m:'faltantes',pid:id});
     if(p.estado==='despachado'||p.estado==='entregado'){
       if(!sg.aviso)L.push({k:'v',id:id+':aviso',tipo:'seg',t:p.n,det:'Pedido despachado: avisale'+(p.entregaEst?' (llega aprox. '+fmt(p.entregaEst)+')':''),f:p.despachoF||HOY,cid:p.cid,m:'pedido',pid:id});
-      const base=p.despachoF||p.f;
+      const base=p.despachoF||p.f;if(base)
       for(const [k,dd,txt,m] of POSTV){const f=addD(base,dd);if(!sg[k]&&f<=HOY)L.push({k:'v',id:id+':'+k,tipo:'seg',t:p.n,det:txt,f,cid:p.cid,m,pid:id})}
     }
   }
