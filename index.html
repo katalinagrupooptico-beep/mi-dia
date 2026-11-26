@@ -159,7 +159,7 @@ const cli=id=>{const b=base.find(c=>c.id===id)||{};return Object.assign({},b,ov[
 const allCli=()=>{const ids=new Set(base.map(c=>c.id));Object.keys(ov).forEach(k=>ids.add(k));return [...ids].map(cli).filter(c=>c.n)};
 const waLink=(c,msg)=>c.wa?'https:\/\/wa.me/'+encodeURIComponent(c.wa)+'?text='+encodeURIComponent(sinSig(msg||'')):'';
 const mapLink=c=>'https:\/\/www.google.com/maps/search/?api=1&query='+encodeURIComponent([c.dir,c.barrio,'Córdoba'].filter(Boolean).join(', '));
-const toast=t=>{const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2200)};
+const toast=t=>{const e=$('toast');e.textContent=t;e.style.pointerEvents='';e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2200)};
 const warn=t=>{const e=$('warn');e.textContent=t||'';e.style.display=t?'block':'none'};
 
 async function save(path,data){
@@ -1322,7 +1322,7 @@ async function valFoto(s,m){
 const yo=()=>{try{return localStorage.getItem('go_yo')||''}catch(e){return ''}};
 function vAplicar(){
   const V=JSON.parse(JSON.stringify(VALIJA0));
-  const ops=Object.entries(difus).filter(([k,o])=>k.startsWith('vop-')&&o&&o.t).map(([k,o])=>o).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  const ops=Object.entries(difus).filter(([k,o])=>k.startsWith('vop-')&&o&&o.t&&!o.anul).map(([k,o])=>o).sort((a,b)=>(a.ts||0)-(b.ts||0));
   const find=(S,m)=>{for(const B of S.b)for(const r of B.r)for(let i=0;i<3;i++){const c=vCel(r[i]);if(c&&c.m===m)return [r,i]}return null};
   ops.forEach(o=>{const S=V.find(x=>x.s===o.s);if(!S)return;
     if(o.t==='fila'){const B=S.b.find(x=>x.n===o.b);if(B)B.r.push([null,null,null]);return}
@@ -1332,7 +1332,7 @@ function vAplicar(){
       const pr=find(S,o.m);let cell;if(pr){cell=pr[0][pr[1]];pr[0][pr[1]]=null}else{const pp=precioLista(S.s,o.m);cell=[o.m,o.e||'',pp,Math.round(pp*1.21)]}
       B.r[o.ri][o.ci]=cell}});
   VALIJA=V;return ops}
-const vOps=()=>Object.entries(difus).filter(([k,o])=>k.startsWith('vop-')&&o&&o.t).map(([k,o])=>o).sort((a,b)=>(b.ts||0)-(a.ts||0));
+const vOps=()=>Object.entries(difus).filter(([k,o])=>k.startsWith('vop-')&&o&&o.t&&!o.anul).map(([k,o])=>Object.assign({k},o)).sort((a,b)=>(b.ts||0)-(a.ts||0));
 const vSeen=()=>{try{return Number(localStorage.getItem('go_vseen')||0)}catch(e){return 0}};
 const vNuevos=()=>vOps().filter(o=>o.quien&&o.quien!==yo()&&(o.ts||0)>vSeen());
 function vTxt(o){const w=VNOM[o.s]||o.s;const q=o.quien||'Alguien';
@@ -1343,10 +1343,12 @@ function vTxt(o){const w=VNOM[o.s]||o.s;const q=o.quien||'Alguien';
 async function vOp(o){
   if(!yo()){st.vPend=o;return open(`<div class="hd"><h2>Quién está usando este celu?</h2><button class="x" data-a="close">×</button></div><p class="sub">Así la otra persona ve quién hizo el cambio en la valija. Se pregunta una sola vez.</p><div class="acts"><button class="b p" data-a="vYo" data-v="Katalina">Katalina</button><button class="b p" data-a="vYo" data-v="Administración">Administración</button></div>`)}
   o=Object.assign({ts:Date.now(),f:HOY,quien:yo()},o);const k='vop-'+o.ts.toString(36)+Math.random().toString(36).slice(2,5);
-  difus[k]=o;vAplicar();st.val.hit='';st.val.mover=null;valija();await save('difusiones/'+k,o);toast('Valija actualizada')}
+  difus[k]=o;vAplicar();st.val.hit='';st.val.mover=null;valija();await save('difusiones/'+k,o);undoBar('Valija actualizada',k)}
+async function vDeshacer(k){const o=difus[k];if(!o||o.anul)return toast('Ya estaba deshecho');const n=Object.assign({},o,{anul:true,anulQuien:yo(),anulTs:Date.now()});difus[k]=n;vAplicar();st.val.hit='';st.val.mover=null;if($('val-q')||$('v-valija'))valija();await save('difusiones/'+k,n);toast('Listo, deshecho')}
+function undoBar(t,k){const e=$('toast');e.innerHTML=esc(t)+' <button data-a="vUndo" data-v="'+esc(k)+'" style="margin-left:10px;background:none;border:1px solid currentColor;color:inherit;border-radius:999px;padding:3px 10px;font:inherit;font-weight:600">Deshacer</button>';e.style.display='block';e.style.pointerEvents='auto';clearTimeout(toast.t);toast.t=setTimeout(()=>{e.style.display='none'},8000)}
 function vAvisos(){const N=vNuevos();if(!N.length)return '';
   return `<div class="note" style="border-color:var(--az);margin-top:12px"><b>Cambios en la valija (${N.length})</b>${N.slice(0,6).map(o=>`<div class="sub" style="margin-top:4px">${esc(fmt(o.f))} · ${esc(vTxt(o))}</div>`).join('')}<div class="acts" style="margin-top:6px"><button class="b" data-a="valija">Ver valija</button><button class="b" data-a="vVisto">Listo, visto</button></div></div>`}
-function vHist(){const L=vOps().slice(0,15);if(!L.length)return '';return `<details style="margin-top:14px"><summary>Últimos cambios (${vOps().length})</summary>${L.map(o=>`<div class="note">${esc(fmt(o.f))} · ${esc(vTxt(o))}</div>`).join('')}</details>`}
+function vHist(){const L=vOps().slice(0,15);if(!L.length)return '';return `<details style="margin-top:14px" open><summary>Últimos cambios (${vOps().length})</summary>${L.map(o=>`<div class="note" style="display:flex;gap:8px;align-items:center"><span style="flex:1">${esc(fmt(o.f))} · ${esc(vTxt(o))}</span><button class="b" style="font-size:12px;padding:4px 10px" data-a="vUndoAsk" data-v="${esc(o.k)}">Deshacer</button></div>`).join('')}</details>`}
 
 const BC={};
 function selCli(id,opts,sel,ph){BC[id]=opts.map(c=>({id:c.id,n:c.n,d:[c.barrio,c.wa?'':'sin WhatsApp'].filter(Boolean).join(' · '),k:norm2([c.n,c.rs,c.barrio].join(' '))}));const c=opts.find(x=>x.id===sel);
@@ -1445,6 +1447,8 @@ document.body.addEventListener('click',async e=>{
   if(a==='vAgregar'){const d=b.dataset,m=($('va-m').value||'').trim();if(!m)return toast('Escribí el modelo');return vOp({t:'poner',nuevo:true,s:d.s,b:d.b,ri:+d.ri,ci:+d.ci,m,e:$('va-e').value,nota:$('va-n').value.trim()})}
   if(a==='vFila')return vOp({t:'fila',s:b.dataset.s,b:b.dataset.b});
   if(a==='vYo'){try{localStorage.setItem('go_yo',v)}catch(e){}const o=st.vPend;st.vPend=null;toast('Listo, sos '+v);if(o)return vOp(o);return valija()}
+  if(a==='vUndo'){$('toast').style.display='none';return vDeshacer(v)}
+  if(a==='vUndoAsk'){if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='Tocá de nuevo';return}return vDeshacer(v)}
   if(a==='vVisto'){try{localStorage.setItem('go_vseen',String(Date.now()))}catch(e){}render();if($('sheet').classList.contains('on')&&$('val-q'))valija();return}
   if(a==='valModo'){st.val.modo=!st.val.modo;st.val.hit='';return valija()}
   if(a==='valSel'){const i=st.vsel.findIndex(y=>y.s===b.dataset.s&&y.m===v);i>=0?st.vsel.splice(i,1):st.vsel.push({s:b.dataset.s,m:v});return valija()}
