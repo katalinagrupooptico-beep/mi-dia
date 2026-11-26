@@ -1104,6 +1104,7 @@ function parseCubo(rows){
     const cod=(cl.match(/\[(\d+)\]\s*$/)||[])[1]||'',k=cod||norm2(cl);const o=M[k]=M[k]||{cod,n:cl.replace(/\s*\[\d+\]\s*$/,''),pf:0,px:0,mf:0,mx:0};
     const q=Number(r[iQ])||0,m=Number(r[iS])||0;if(x){o.px+=q;o.mx+=m}else{o.pf+=q;o.mf+=m}
     const fe=iF>=0?fechaCubo(r[iF]):'';if(fe){o.det=o.det||{};const g=o.det[fe+(x?'X':'F')]=o.det[fe+(x?'X':'F')]||{f:fe,t:x?'X':'F',q:0,m:0};g.q+=q;g.m+=m}});
+  Object.values(M).forEach(o=>{if(!o.det)return;const G=Object.values(o.det).sort((a,b)=>a.f.localeCompare(b.f));G.filter(g=>g.q<0||g.m<0).forEach(g=>{const dst=G.filter(h=>h!==g&&h.t===g.t&&h.q>0).sort((a,b)=>Math.abs(a.f.localeCompare(g.f))-Math.abs(b.f.localeCompare(g.f)))[0];if(dst){dst.q+=g.q;dst.m+=g.m;delete o.det[g.f+g.t]}})});
   const L=Object.values(M);const tot=L.reduce((t,o)=>({pf:t.pf+o.pf,px:t.px+o.px,mf:t.mf+o.mf,mx:t.mx+o.mx}),{pf:0,px:0,mf:0,mx:0});tot.pz=tot.pf+tot.px;return {L,tot}}
 function enCamino(){const L=Object.values(pedidos).filter(p=>p.f&&!String(p.id).startsWith('C')&&!p.fechaFact&&!['facturado','despachado','entregado'].includes(p.estado)&&diasEntre(p.f,HOY)<=60);
   return {n:L.length,pz:L.reduce((t,p)=>t+pzDe(p),0)}}
