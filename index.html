@@ -324,7 +324,7 @@ function formCobro(cid,id){
   const opts=allCli().filter(c=>conSaldo.has(c.id)).sort((a,b)=>a.n.localeCompare(b.n));
   setTimeout(()=>{const t=$('p-tp');if(t)t.onclick=e=>{const b=e.target.closest('[data-tp]');if(!b)return;t.querySelectorAll('.b').forEach(y=>y.classList.toggle('on',y===b))}},0);
   open(`<div class="hd"><h2>${id?'Editar cobro':'Nuevo cobro'}</h2><button class="x" data-a="close" aria-label="Cerrar">×</button></div>
-   <label>Óptica</label><select id="p-c"><option value="">Elegí…</option>${opts.map(c=>`<option value="${esc(c.id)}"${c.id===p.cid?' selected':''}>${esc(c.n)}</option>`).join('')}</select>
+   <label>Óptica</label>${selCli('p-c',opts,p.cid)}
    <div class="row"><div><label>Monto ($)</label><input id="p-m" inputmode="numeric" value="${esc(p.monto||'')}"></div><div><label>Vence / reclamar el</label><input type="date" id="p-v" value="${esc(p.vence||'')}"></div></div>
    <label>Tipo</label><div class="chips" id="p-tp">${[['Factura','Facturado'],['Remito','En 02']].map(([k,v])=>`<button class="b${(p.tipo||'Factura')===k?' on':''}" data-tp="${k}">${v}</button>`).join('')}</div>
    <label>Nota</label><input id="p-n" value="${esc(p.nota||'')}" placeholder="Ej. cheque 3 de 9, factura 0001-...">
@@ -843,22 +843,26 @@ async function cargarPedidos(){
     pedidos=o;pedErr='';pedT=Date.now()}catch(e){pedErr=e&&e.code||'error'}
   render();
 }
+function filtrarPed(){const q=norm2(st.pq||''),ws=q.split(/\s+/).filter(Boolean);document.querySelectorAll('#v-cobros [data-pn]').forEach(e=>e.hidden=!ws.every(w=>e.dataset.pn.includes(w)))}
+document.addEventListener('input',e=>{if(e.target.id==='ped-q'){st.pq=e.target.value;filtrarPed()}});
 function renderPedidos(){
   if(Date.now()-pedT>60000&&mcpG&&!pedErr)setTimeout(cargarPedidos,0);
   const L=Object.entries(pedidos).sort((a,b)=>(b[1].f||'').localeCompare(a[1].f||''));
   const cnt=k=>L.filter(([,p])=>p.estado===k).length;
   $('v-cobros').innerHTML=`${segVentas()}<div class="top"><div class="d"><h1>Pedidos</h1><small style="margin-top:6px">${cnt('preparacion')} en preparación · ${cnt('facturado')} facturados · ${cnt('despachado')} despachados</small></div><button class="b p" data-a="nuevaVenta">+ Venta</button></div>
+   <input id="ped-q" placeholder="Buscar cliente…" autocomplete="off" style="margin-bottom:8px" value="${esc(st.pq||'')}">
    <div class="acts" style="margin:0 0 10px"><button class="b" data-a="pedReload">Actualizar</button></div>
    ${pedErr?`<div class="note" style="border-color:var(--co)">${esc(vErrTxt({code:pedErr}))}</div>`:''}
    <p class="sub" style="margin-top:0">Tocá Actualizar en cada pedido para cargar estado, factura, faltantes, despacho y comprobante.</p>
-   ${L.map(([id,p])=>`<div class="it"><div class="bd"><div class="tt">${esc(p.n)}</div><div class="sub">${esc(['Venta del '+fmt(p.f),p.monto?'vendido '+money(p.monto):'',p.fechaFact?'facturado '+fmt(p.fechaFact)+(p.tipoFact==='Remito'?' (en 02)':''):(p.f?'factura aprox. '+fmt(addD(p.f,7)):''),p.entregaEst?'llega aprox. '+fmt(p.entregaEst):''].filter(Boolean).join(' · '))}</div>${p.montoFact!=null&&Number(p.montoFact)!==Number(p.monto||0)?`<div class="sub" style="color:var(--co)">Monto final ${esc(money(p.montoFact))} (${esc(money(Number(p.montoFact)-Number(p.monto||0)))})${p.faltantes?' · faltaron: '+esc(p.faltantes):''}</div>`:p.faltantes?`<div class="sub" style="color:var(--co)">Faltaron: ${esc(p.faltantes)}</div>`:''}
+   ${L.map(([id,p])=>`<div class="it" data-pn="${esc(norm2(p.n))}"><div class="bd"><div class="tt">${esc(p.n)}</div><div class="sub">${esc(['Venta del '+fmt(p.f),p.monto?'vendido '+money(p.monto):'',p.fechaFact?'facturado '+fmt(p.fechaFact)+(p.tipoFact==='Remito'?' (en 02)':''):(p.f?'factura aprox. '+fmt(addD(p.f,7)):''),p.entregaEst?'llega aprox. '+fmt(p.entregaEst):''].filter(Boolean).join(' · '))}</div>${p.montoFact!=null&&Number(p.montoFact)!==Number(p.monto||0)?`<div class="sub" style="color:var(--co)">Monto final ${esc(money(p.montoFact))} (${esc(money(Number(p.montoFact)-Number(p.monto||0)))})${p.faltantes?' · faltaron: '+esc(p.faltantes):''}</div>`:p.faltantes?`<div class="sub" style="color:var(--co)">Faltaron: ${esc(p.faltantes)}</div>`:''}
     ${p.detalle?`<div class="sub">${esc(p.detalle)}</div>`:''}${p.notaCliente?`<div class="note"><b>Para el cliente:</b> ${esc(p.notaCliente)}</div>`:''}
     <div class="acts"><span class="tag${p.estado==='preparacion'?' c':''}">${esc(ESTP[p.estado]||p.estado)}</span>${p.comprobante?`<a class="b" href="${esc(p.comprobante)}" target="_blank" rel="noopener">Comprobante</a>`:''}<button class="b" data-a="editPed" data-id="${esc(id)}">Actualizar</button>${p.estado!=='preparacion'&&p.cid?`<button class="b w" data-a="msg" data-id="${esc(p.cid)}" data-m="pedido" data-v="${esc(id)}">Avisar al cliente</button>`:''}</div></div></div>`).join('')||`<div class="empty">${mcpG?'Todavía no hay pedidos. Cargá una venta con "+ Venta".':'Abrí la app desde Claude para ver los pedidos de tu hoja.'}</div>`}`;
+  filtrarPed();
 }
 function nuevaVenta(cid){
   const opts=allCli().filter(c=>c.etapa!=='descartado').sort((a,b)=>a.n.localeCompare(b.n));
   open(`<div class="hd"><h2>Nueva venta</h2><button class="x" data-a="close" aria-label="Cerrar">×</button></div>
-   <label>Óptica</label><select id="v-c"><option value="">Elegí…</option>${opts.map(c=>`<option value="${esc(c.id)}"${c.id===cid?' selected':''}>${esc(c.n)}</option>`).join('')}</select>
+   <label>Óptica</label>${selCli('v-c',opts,cid)}
    <label>¿Qué compró?</label><textarea id="v-d" placeholder="Ej. 40 Tiffany + 20 UP, pago en 3 cheques"></textarea>
    <div class="row"><div><label>Monto vendido ($, opcional)</label><input id="v-m" inputmode="numeric"></div><div><label>Fecha</label><input type="date" id="v-f" value="${HOY}"></div></div>
    <div class="acts" style="margin-top:14px"><button class="b p" data-a="okVenta">Guardar en PEDIDOS</button></div>`);
@@ -1101,6 +1105,13 @@ async function valFoto(s,m){
   try{const u=await fotoURL(f.id);box.innerHTML=`<div class="card" style="padding:10px;margin-bottom:8px">${tx}<img src="${esc(u)}" style="width:100%;border-radius:10px;margin-top:6px;background:#fff"></div>`}catch(e){box.innerHTML=`<div class="note">${tx}<div class="sub">No pude traer la foto.</div></div>`}
 }
 
+const BC={};
+function selCli(id,opts,sel,ph){BC[id]=opts.map(c=>({id:c.id,n:c.n,d:[c.barrio,c.wa?'':'sin WhatsApp'].filter(Boolean).join(' · '),k:norm2([c.n,c.rs,c.barrio].join(' '))}));const c=opts.find(x=>x.id===sel);
+  return `<div class="bc" style="position:relative"><input type="hidden" id="${id}" value="${esc(sel||'')}"><input data-bc="${id}" placeholder="${esc(ph||'Escribí el nombre de la óptica…')}" value="${esc(c?c.n:'')}" autocomplete="off" autocorrect="off" spellcheck="false"><div id="${id}-r"></div></div>`}
+document.addEventListener('input',e=>{const i=e.target.closest&&e.target.closest('[data-bc]');if(!i)return;const id=i.dataset.bc,q=norm2(i.value),h=$(id),r=$(id+'-r');h.value='';
+  if(!q){r.innerHTML='';return}const ws=q.split(/\s+/).filter(Boolean);const L=(BC[id]||[]).filter(c=>ws.every(w=>c.k.includes(w))).slice(0,8);
+  r.innerHTML=L.length?L.map(c=>`<button type="button" class="it" style="display:block;width:100%;text-align:left;margin:4px 0 0;padding:10px 12px" data-bcpick="${esc(id)}" data-v="${esc(c.id)}"><span class="tt">${esc(c.n)}</span>${c.d?`<span class="sub" style="display:block">${esc(c.d)}</span>`:''}</button>`).join(''):'<div class="sub" style="margin-top:6px">No encontré esa óptica.</div>'});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-bcpick]');if(!b)return;const id=b.dataset.bcpick,c=(BC[id]||[]).find(x=>x.id===b.dataset.v);if(!c)return;$(id).value=c.id;const i=document.querySelector('[data-bc="'+id+'"]');if(i)i.value=c.n;$(id+'-r').innerHTML=''});
 function textoValija(c,iva){
   const T=valijaTodos(),G={};st.vsel.forEach(y=>{let it=T.find(x=>x.s===y.s&&x.m===y.m);if(!it){const pp=precioLista(y.s,y.m);it={m:y.m,p:pp,pi:Math.round(pp*1.21)}}const L=vLineaDe(y.s,y.m);(G[L]=G[L]||[]).push(it)});
   const L=['Hola! Cómo andás? Te paso los modelos que te mostré:',''];
@@ -1112,7 +1123,7 @@ function valMsg(){
   if(!st.vsel.length)return toast('Elegí al menos un modelo');
   const C=allCli().filter(c=>c.etapa!=='descartado').sort((a,b)=>a.n.localeCompare(b.n));
   open(`<div class="top" style="margin-bottom:4px"><div class="d"><h2 style="margin:0">Mensaje con ${st.vsel.length} modelo${st.vsel.length===1?'':'s'}</h2></div><button class="b" data-a="valija">‹ Valija</button></div>
-   <label>Para quién (opcional)</label><select id="vm-c"><option value="">Sin cliente, solo copiar</option>${C.map(c=>`<option value="${esc(c.id)}">${esc(c.n)}${c.wa?'':' (sin WhatsApp)'}</option>`).join('')}</select>
+   <label>Para quién (opcional)</label>${selCli('vm-c',C,'','Escribí el nombre o dejalo vacío para solo copiar')}
    <label class="sel" style="margin-top:10px;color:var(--ink)"><input type="checkbox" id="vm-i"> Mostrar precios con IVA</label>
    <div class="acts" style="margin-top:12px"><button class="b p" data-a="valMsgOk">Seguir</button></div>`);
 }
