@@ -30,14 +30,14 @@ main{max-width:640px;margin:0 auto;padding:20px 16px}
 .top{display:flex;align-items:center;gap:16px;margin-bottom:18px}
 .top .d{flex:1}.top small{color:var(--mut);font-size:14px;display:block;margin-bottom:4px}
 .ring{width:72px;height:72px;flex:none}
-.sec{margin:22px 0 8px;display:flex;align-items:baseline;gap:8px}.sec span{color:var(--mut);font-size:14px}
-.it{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:flex-start;margin-bottom:8px}
+.sec{margin:28px 0 10px;display:flex;align-items:baseline;gap:8px}.sec span{color:var(--mut);font-size:14px}
+.it{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
 .it.venc{border-color:var(--co);background:linear-gradient(var(--cos),var(--cos)) left/4px 100% no-repeat,var(--card)}
 .it.done{opacity:.55}.it.done .tt{text-decoration:line-through}
 .chk{width:28px;height:28px;border-radius:50%;border:2px solid var(--az);background:none;flex:none;cursor:pointer;margin-top:2px;padding:0;display:grid;place-items:center;color:#fff}
 .done .chk{background:var(--az)}
 .bd{flex:1}.tt{font-weight:600}.sub{color:var(--mut);font-size:14px;margin-top:2px}
-.acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .b{font:500 14px Inter,sans-serif;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;min-height:38px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .b.p{background:var(--az);border-color:var(--az);color:#fff}.b.w{color:var(--ok);border-color:var(--ok)}
 .b:focus-visible,.chk:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--az);outline-offset:2px}
@@ -45,8 +45,8 @@ main{max-width:640px;margin:0 auto;padding:20px 16px}
 .tag.c{background:var(--cos);color:var(--co)}
 .empty{color:var(--mut);text-align:center;padding:24px 8px;border:1px dashed var(--line);border-radius:14px}
 input,select,textarea{font:16px Inter,sans-serif;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
-textarea{min-height:80px}label{font-size:14px;color:var(--mut);display:block;margin:12px 0 4px}
-.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 140px}
+textarea{min-height:80px}label{font-size:14px;color:var(--mut);display:block;margin:16px 0 6px}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 140px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0;scrollbar-width:none}.chips .b{flex:none}.chips .b.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 nav{position:fixed;inset:auto 0 0 0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:5}
 nav a{flex:1;max-width:160px;text-align:center;padding:10px 2px 12px;color:var(--mut);text-decoration:none;font-size:12px;font-weight:500;min-width:0}
@@ -59,14 +59,16 @@ nav a.on{color:var(--az)}
 .badge{background:var(--co);color:#fff;border-radius:999px;font-size:11px;padding:0 6px;margin-left:3px}
 .sheet{position:fixed;inset:0;background:rgb(0 0 0/.35);display:none;align-items:flex-end;justify-content:center;z-index:10}
 .sheet.on{display:flex}
-.pan{background:var(--bg);width:100%;max-width:640px;max-height:88vh;overflow:auto;border-radius:20px 20px 0 0;padding:20px 16px 28px;animation:up .2s ease-out}
+.pan{background:var(--bg);width:100%;max-width:640px;max-height:88vh;overflow:auto;border-radius:20px 20px 0 0;padding:22px 18px calc(32px + env(safe-area-inset-bottom));animation:up .2s ease-out}
 @keyframes up{from{transform:translateY(30px);opacity:0}}@media(prefers-reduced-motion:reduce){.pan{animation:none}}
 .pan .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
 .x{background:none;border:0;font-size:26px;color:var(--mut);cursor:pointer;min-width:44px;min-height:44px}
-.note{border-left:2px solid var(--line);padding:2px 0 2px 10px;margin:8px 0;font-size:14px}.note b{color:var(--mut);font-weight:500}
+.note{border-left:2px solid var(--line);padding:4px 0 4px 12px;margin:10px 0;font-size:14px;line-height:1.45}.note b{color:var(--mut);font-weight:500}
 .kpi{display:flex;gap:10px;margin:10px 0}.kpi div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
 .kpi b{font:600 clamp(17px,5.2vw,24px) Outfit,sans-serif;display:block;white-space:nowrap}.kpi span{font-size:13px;color:var(--mut)}
 .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;display:none;z-index:20}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px}
+.pan .sec h3{font-size:16px}.pan .sec{border-top:1px solid var(--line);padding-top:16px}
 .warn{background:var(--cos);color:var(--co);padding:10px 12px;border-radius:10px;font-size:14px;margin-bottom:10px;display:none}
 .sel{display:flex;align-items:center;gap:10px}.sel input{width:22px;height:22px;flex:none}
 details summary{cursor:pointer;color:var(--mut);font-size:14px;padding:8px 0}
@@ -237,7 +239,7 @@ function renderHoy(){
   const mesN=allCli().filter(delMes).length;const slL=itemsSL(HOY),slOk=(slab[HOY]||{}).ok||{},slP=slL.filter(x=>!slOk[x.k]).length,tarde=+new Date().toLocaleString('en-US',{timeZone:TZ,hour:'numeric',hour12:false})>=17;
   const man=Object.values(tareas).filter(t=>!t.hecha&&t.f===addD(HOY,1)).length+allCli().filter(c=>c.prox===addD(HOY,1)).length;
   $('nb').innerHTML=tot-done?`<span class="badge">${tot-done}</span>`:'';
-  $('v-hoy').innerHTML=`<div class="top"><div class="d"><small>${esc(new Date().toLocaleDateString('es-AR',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'}))}</small><h1>${tot-done?`Te quedan ${tot-done}`:tot?'¡Día cerrado!':'Día libre'}</h1></div>
+  $('v-hoy').innerHTML=`${eventoHtml()}<div class="top"><div class="d"><small>${esc(new Date().toLocaleDateString('es-AR',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'}))}</small><h1>${tot-done?`Te quedan ${tot-done}`:tot?'¡Día cerrado!':'Día libre'}</h1></div>
    <svg class="ring" viewBox="0 0 72 72" role="img" aria-label="${done} de ${tot} hechas"><circle cx="36" cy="36" r="${R}" fill="none" stroke="var(--line)" stroke-width="7"/><circle cx="36" cy="36" r="${R}" fill="none" stroke="var(--az)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 36 36)"/><text x="36" y="41" text-anchor="middle" font-family="Outfit" font-size="16" font-weight="600" fill="var(--ink)">${done}/${tot}</text></svg></div>
    <div class="row" style="margin-bottom:6px;gap:6px"><button class="b p" data-a="nueva">+ Tarea</button><button class="b" data-a="nuevoCobro">+ Cobro</button><button class="b" data-a="nuevaVenta">+ Venta</button><button class="b" data-a="difusion">Difusión</button><button class="b" data-a="msgLibre">Mensaje</button><button class="b" data-a="smartlab">Smart Lab</button><button class="b" data-a="viaticos">Viáticos</button><button class="b" data-a="informe">Informe del mes</button></div>
    ${tarde&&slP?`<button class="it alarm" data-a="smartlab" style="width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit"><div class="bd"><div class="tt">Cerrá el día: ${slP} cosa${slP>1?'s':''} para cargar en Smart Lab</div><div class="sub">Visitas y contactos de hoy, listos para pasar.</div></div></button>`:''}
@@ -900,10 +902,26 @@ function editPed(id){
    <div class="sec"><h3>Despacho</h3></div>
    <div class="row"><div><label>Despachado el</label><input type="date" id="p-df" value="${esc(p.despachoF||'')}"></div><div><label>Entrega estimada</label><input type="date" id="p-ee" value="${esc(p.entregaEst||'')}"></div></div>
    <label>Qué hay que decirle al cliente</label><textarea id="p-nc">${esc(p.notaCliente||'')}</textarea>
-   <label>Link del comprobante (Drive)</label><input id="p-cl" value="${esc(p.comprobante||'')}" placeholder="https:\/\/drive.google.com/...">
+   <label>Comprobante (factura / remito)</label>
+   <div id="p-drop" style="border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mut)">${GAS&&SUBIR_OK?`Arrastrá el archivo acá o <label class="b" style="display:inline-block;cursor:pointer">elegilo<input type="file" id="p-file" accept="application/pdf,image/*" hidden></label>`:'Subí el archivo a Drive y pegá el link abajo.'}</div>
+   <div id="p-up" class="sub" style="margin-top:6px">${p.comprobante?`Ya tiene comprobante: <a href="${esc(p.comprobante)}" target="_blank" rel="noopener">ver</a>`:''}</div>
+   <label>Link del comprobante</label><input id="p-cl" value="${esc(p.comprobante||'')}" placeholder="Se completa solo al adjuntar">
    <div class="acts" style="margin-top:14px"><button class="b p" data-a="okPed" data-id="${esc(id)}">Guardar en la hoja</button><a class="b" href="${PURL}" target="_blank" rel="noopener">Abrir la hoja</a></div>`);
   $('p-tp').onclick=e=>{const b=e.target.closest('[data-tp]');if(!b)return;$('p-tp').querySelectorAll('.b').forEach(y=>y.classList.toggle('on',y===b))};
+  const dz=$('p-drop');if(GAS&&SUBIR_OK&&dz){const hi=o=>{dz.style.borderColor=o?'var(--az)':'var(--line)';dz.style.background=o?'var(--azs)':''};
+    ['dragenter','dragover'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();hi(1)}));['dragleave','drop'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();hi(0)}));
+    dz.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)subirComp(f,p)});
+    const fi=$('p-file');if(fi)fi.onchange=()=>{if(fi.files[0])subirComp(fi.files[0],p)}}
   $('p-st').onclick=e=>{const b=e.target.closest('[data-ss]');if(!b)return;$('p-st').querySelectorAll('.b').forEach(y=>y.classList.toggle('on',y===b));if(b.dataset.ss==='facturado'&&!$('p-ff').value)$('p-ff').value=HOY;if(['despachado','entregado'].includes(b.dataset.ss)&&!$('p-df').value)$('p-df').value=HOY};
+}
+const SUBIR_OK=false;
+async function subirComp(f,p){
+  const up=$('p-up');if(f.size>15e6)return toast('El archivo es muy pesado (máx. 15 MB)');
+  up.textContent='Subiendo '+f.name+'…';
+  try{const b64=await new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=ko;r.readAsDataURL(f)});
+    const nom=(p.n||'pedido').replace(/[^\w áéíóúñÁÉÍÓÚÑ.-]/g,'')+' - '+(p.id||'')+' - '+f.name;
+    const url=await gasRun('subir',nom,f.type,b64);$('p-cl').value=url;up.innerHTML='✓ Adjuntado: <a href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(f.name)+'</a>. Tocá "Guardar en la hoja" para dejarlo cargado.';toast('Archivo subido')}
+  catch(e){up.textContent='No pude subir el archivo. Probá de nuevo.';toast('No pude subir el archivo')}
 }
 async function okPed(id,btn){
   const p=pedidos[id];if(!mcpG)return toast(vErrTxt({code:'sin_conexion'}));
@@ -998,6 +1016,15 @@ async function sumarPiezas(c,f,delta){
     toast((delta>0?'+':'')+delta+' piezas en OPERACIONES ('+c.n+', mes '+Number(m)+')');return true}
   catch(e){toast('No pude sumar las piezas en OPERACIONES');return false}
 }
+const EVENTOS=[{nombre:'La Franja Visual',desde:'2026-11-27',hasta:'2026-11-28'}];
+function eventoHtml(){
+  for(const e of EVENTOS){const dd=diasEntre(HOY,e.desde),dur=diasEntre(e.desde,e.hasta)+1,dia=diasEntre(e.desde,HOY)+1,post=diasEntre(e.hasta,HOY);
+    const box=(t,b,col)=>`<div class="card" style="padding:16px;margin:0 0 16px;border-color:${col};background:linear-gradient(135deg,var(--azs),var(--card))"><div style="font:600 20px Outfit,sans-serif">${t}</div><div class="sub" style="margin-top:6px">${b}</div></div>`;
+    if(HOY>=e.desde&&HOY<=e.hasta)return box(`Llegó el día: ${esc(e.nombre)} 🎉`,`Día ${dia} de ${dur}${HOY===e.hasta?' · último día, a cerrar todo':''}.<br>• Cada venta: <b>Ventas → + Venta</b> con las piezas.<br>• Óptica nueva: tocá el <b>+</b> de abajo y cargala en 10 segundos.<br>• Mostrá modelos y mandá precios desde <b>Valija → Elegir modelos para un cliente</b>.<br>• Si algo se vende, marcalo como <b>Vendido</b> en la valija.<br>Mucha suerte, a romperla!`,'var(--az)');
+    if(dd>0&&dd<=10)return box(`${dd===1?'Mañana es':'Faltan '+dd+' días para'} ${esc(e.nombre)}`,dd===1?'Cargá el celu, revisá la valija y llevá tarjetas. Avisales a tus clientes que los esperás en el stand.':'Buen momento para invitar a tus clientes y prospectos.','var(--line)');
+    if(post>0&&post<=4)return box(`Después de ${esc(e.nombre)}`,'Escribile a las ópticas que conociste y a las que te compraron para agradecer y confirmar el pedido. Los contactos nuevos ya los tenés en Clientes.','var(--line)');
+  }return ''}
+const diasEntre=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);
 const FERIADOS=new Set(['2026-11-23','2026-12-07','2026-12-08','2026-12-25','2027-01-01','2027-02-15','2027-02-16','2027-03-24','2027-04-02','2027-05-01','2027-05-25','2027-06-20','2027-07-09','2027-12-08','2027-12-25']);
 function habiles(mes){const [Y,M]=mes.split('-').map(Number),n=new Date(Y,M,0).getDate(),L=[];for(let d=1;d<=n;d++){const iso=mes+'-'+String(d).padStart(2,'0'),w=new Date(iso+'T12:00:00').getDay();if(w&&w<6&&!FERIADOS.has(iso))L.push(iso)}return L}
 const PZH={};let pzhT=0;
@@ -1026,6 +1053,7 @@ function renderInicio(){
   else if(proy>=prox)frase=`A este ritmo cerrás el mes con unas ${proy} piezas. Te faltan ${falta} para llegar a ${prox}.`;
   else frase=`Te faltan ${falta} piezas para llegar a ${prox}: son ${porDia} por día en los ${quedan} día${quedan===1?'':'s'} hábiles que quedan.`;
   $('v-inicio').innerHTML=`   <div class="top" style="margin-top:6px"><div class="d"><h1 style="text-transform:none">${esc(hoyTxt.charAt(0).toUpperCase()+hoyTxt.slice(1))}</h1><small>Día hábil ${idx} de ${H.length} · ${quedan>0?'te quedan '+quedan+' (contando hoy)':'terminó el mes'}</small></div></div>
+   ${eventoHtml()}
    ${(vAplicar(),vAvisos())}
    ${recta?`<div class="note" style="margin-top:12px;border-color:var(--co)"><b>Recta final de ${esc(nombreMes)}</b>: ${quedan===1?'hoy es el último día hábil':'quedan '+quedan+' días hábiles'}. ${quedan<=3?'Es el momento de cerrar los pedidos pendientes y llamar a los que te dijeron "la semana que viene".':'Repasá a quién le toca reposición y cerrá lo que esté abierto.'}</div>`:''}
    <div class="card" style="padding:14px;margin-top:12px"><div class="tt" style="font-weight:600">Piezas de ${esc(nombreMes)}</div>
@@ -1116,7 +1144,7 @@ async function guardarRapido(){
 }
  
 function alarma(){
-  if(alarmShown||!baseOK||!dbOK)return;alarmShown=true;
+  if(alarmShown||!baseOK||!dbOK||view()!=='hoy')return;alarmShown=true;
   const L=itemsHoy().filter(x=>!x.hecha);if(!L.length)return;
   const v=L.filter(x=>x.f<HOY),h=L.length-v.length;
   open(`<div class="hd"><h2 style="color:var(--co)">${v.length?`Tenés ${v.length} vencida${v.length>1?'s':''}`:`Hoy tenés ${h} pendiente${h>1?'s':''}`}</h2><button class="x" data-a="close" aria-label="Cerrar">×</button></div>
@@ -1328,7 +1356,7 @@ document.body.addEventListener('click',async e=>{
 });
 
 function render(){const v=view();renderHoy();try{const n=vNuevos().length,e=$('vbdg');if(e)e.innerHTML=n?`<span class="badge" style="background:var(--az)">${n}</span>`:''}catch(_){}if(v==='inicio')renderInicio();if(v==='clientes')renderClientes();if(v==='ruta')renderRuta();if(v==='cobros')renderCobros()}
-addEventListener('hashchange',()=>{render();scrollTo(0,0)});
+addEventListener('hashchange',()=>{render();scrollTo(0,0);if(view()==='hoy')alarma()});
 
 document.body.addEventListener('click',async e=>{
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id;
