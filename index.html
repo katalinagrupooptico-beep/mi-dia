@@ -915,14 +915,14 @@ function editPed(id){
     const fi=$('p-file');if(fi)fi.onchange=()=>{if(fi.files[0])subirComp(fi.files[0],p)}}
   $('p-st').onclick=e=>{const b=e.target.closest('[data-ss]');if(!b)return;$('p-st').querySelectorAll('.b').forEach(y=>y.classList.toggle('on',y===b));if(b.dataset.ss==='facturado'&&!$('p-ff').value)$('p-ff').value=HOY;if(['despachado','entregado'].includes(b.dataset.ss)&&!$('p-df').value)$('p-df').value=HOY};
 }
-const SUBIR_OK=false;
+const SUBIR_OK=true;
 async function subirComp(f,p){
   const up=$('p-up');if(f.size>15e6)return toast('El archivo es muy pesado (máx. 15 MB)');
   up.textContent='Subiendo '+f.name+'…';
   try{const b64=await new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=ko;r.readAsDataURL(f)});
     const nom=(p.n||'pedido').replace(/[^\w áéíóúñÁÉÍÓÚÑ.-]/g,'')+' - '+(p.id||'')+' - '+f.name;
     const url=await gasRun('subir',nom,f.type,b64);$('p-cl').value=url;up.innerHTML='✓ Adjuntado: <a href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(f.name)+'</a>. Tocá "Guardar en la hoja" para dejarlo cargado.';toast('Archivo subido')}
-  catch(e){up.textContent='No pude subir el archivo. Probá de nuevo.';toast('No pude subir el archivo')}
+  catch(e){const m=String(e&&e.message||'');up.textContent=/desconocida/i.test(m)?'Falta activar la subida de archivos en el programa de Google. Mientras tanto subí el archivo a Drive y pegá el link abajo.':'No pude subir el archivo. Probá de nuevo.';toast('No pude subir el archivo')}
 }
 async function okPed(id,btn){
   const p=pedidos[id];if(!mcpG)return toast(vErrTxt({code:'sin_conexion'}));
